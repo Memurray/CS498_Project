@@ -102,7 +102,6 @@ public class ImageFrame extends JFrame {
         c.add(view, BorderLayout.EAST);
         c.add(controlPanel, BorderLayout.SOUTH);
     }
-
  
 
     public BufferedImage readImage (String file) {
