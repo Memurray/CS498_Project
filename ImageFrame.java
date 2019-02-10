@@ -12,6 +12,8 @@ public class ImageFrame extends JFrame {
     private JLabel infoLabel;      // an informative label for the simple GUI
     private JButton EdgeDetectButton;
     private JButton ResetButton;
+    private boolean isLDragging = false;
+    private Point dragStart;
 
     // Constructor for the frame
     public ImageFrame () {
@@ -19,6 +21,7 @@ public class ImageFrame extends JFrame {
         this.buildMenus();		// helper method to build menus
         this.buildComponents();		// helper method to set up components
         this.buildDisplay();		// Lay out the components on the display
+        this.buildMouseSettings();
     }
 
     private void buildMenus () {
@@ -101,6 +104,28 @@ public class ImageFrame extends JFrame {
         Container c = this.getContentPane();
         c.add(view, BorderLayout.EAST);
         c.add(controlPanel, BorderLayout.SOUTH);
+    }
+    
+    private void buildMouseSettings(){
+        view.addMouseListener(new MouseListener(){  //track mouse interactions with left render panel
+            public void mouseExited(MouseEvent e){}
+            public void mouseEntered(MouseEvent e){}
+            public void mouseReleased(MouseEvent e){
+                isLDragging = false;  
+                view.endSelection(); 
+            } 
+            public void mousePressed(MouseEvent e){
+                	isLDragging = true;  //now dragging
+                	dragStart = e.getPoint();               
+            }
+            public void mouseClicked(MouseEvent e){}
+        });
+        view.addMouseMotionListener(new MouseMotionListener(){
+            public void mouseDragged(MouseEvent e) {
+                view.setSelection(dragStart,new Point(e.getPoint()));                
+            }
+            public void mouseMoved(MouseEvent e) {}
+        });
     }
  
 
