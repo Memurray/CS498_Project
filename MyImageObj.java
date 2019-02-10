@@ -6,8 +6,6 @@ import java.awt.image.ConvolveOp;
 import java.awt.image.Kernel;
 
 public class MyImageObj extends JLabel {
-
-    // instance variable to hold the buffered image
     private BufferedImage bim=null;
     private BufferedImage filteredbim=null;
     private BufferedImage finalbim=null;
@@ -15,26 +13,26 @@ public class MyImageObj extends JLabel {
     int [] toFillArray;
     int [] rgbData;
     int height, width, pixelsSelected;
+    private Point selectionStart, selectionEnd;
+    private boolean selecting = false;
     
+    public void setSelection(Point start, Point end){
+    	selecting=true;
+        selectionStart = start;
+        selectionEnd = end;
+        repaint();
+    }    
+    
+    public void endSelection() {
+    	selecting=false;
+    	paintRegionRedWithBounds();
+        repaint();
+    }
 
     private final float[] EdgeDetect =
             {       -1,-1,-1,
                     -1,8,-1,
                     -1,-1,-1};
-
-    private final float[] BasicBlur =//Custom kernel for gaussian blur sigma 3.0
-            {
-                    0.1111111f,0.1111111f,0.1111111f,
-                    0.1111111f,0.1111111f,0.1111111f,
-                    0.1111111f,0.1111111f,0.1111111f};
-
-    private final float[] GAUSS5x5SD1_0 =   //Custom kernel for gaussian blur sigma 1.0
-            {
-                    0.003765f, 0.015019f, 0.023792f, 0.015019f, 0.003765f,
-                    0.015019f, 0.059912f, 0.094907f, 0.059912f, 0.015019f,
-                    0.023792f, 0.094907f, 0.150342f, 0.094907f, 0.023792f,
-                    0.015019f, 0.059912f, 0.094907f, 0.059912f, 0.015019f,
-                    0.003765f, 0.015019f, 0.023792f, 0.015019f, 0.003765f};
 
     // Default constructor
     public MyImageObj() {
@@ -79,29 +77,15 @@ public class MyImageObj extends JLabel {
     //  apply the blur operator
     public void filterImage() {
         if (bim == null) return;
-        Kernel kernel;
-
-
-        kernel = new Kernel (3, 3, EdgeDetect);
+        Kernel kernel = new Kernel (3, 3, EdgeDetect);
         ConvolveOp cop = new ConvolveOp (kernel, ConvolveOp.EDGE_NO_OP, null);
 
-        //kernel = new Kernel (5, 5, GAUSS5x5SD1_0);
-        //ConvolveOp cop2 = new ConvolveOp (kernel, ConvolveOp.EDGE_NO_OP, null);
-
-        // make a copy of the buffered image
         BufferedImage newbim = new BufferedImage
                 (bim.getWidth(), bim.getHeight(),
                         BufferedImage.TYPE_INT_RGB);
-//        BufferedImage newbim2 = new BufferedImage
-//                (bim.getWidth(), bim.getHeight(),
-//                        BufferedImage.TYPE_BYTE_BINARY);
         Graphics2D big = newbim.createGraphics();
         big.drawImage (bim, 0, 0, null);
-
         cop.filter(newbim, filteredbim);
-
-        //cop.filter(newbim, newbim2);
-        //cop2.filter(newbim2, filteredbim);
         blackAndWhite();
         mapBounds();
         paintRegionRed();
@@ -128,8 +112,7 @@ public class MyImageObj extends JLabel {
                 	r1=0;	
                 	b1 =0;
                 	g1=0;
-                }
-         
+                }         
                 rgbim1 [col] = (r1 << 16) | (g1 << 8) | b1;  //build rgb for that pixel
             }
             filteredbim.setRGB (0, row, width, 1, rgbim1, 0, width);  //modify this row to new rules
@@ -146,7 +129,6 @@ public class MyImageObj extends JLabel {
             for (int col = 0; col < width; col++){  //for each column
             	int pixel = row*width + col;
             	pixelsSelected = 0;
-            	
                 if(toFillArray[pixel] == 0) {
 	            	int rgb1 = rgbData[pixel];  //grab pixel
 	                int r1 = (rgb1 >> 16) & 255;  //split out red
@@ -155,24 +137,30 @@ public class MyImageObj extends JLabel {
 	                if(r1==0 && g1==0 && b1==0) {
 	                	toFillArray[pixel]=3;
 	                	expand(row,col);
-                		for(int i=0; i < height; i++) {
-                			for(int j=0; j < width; j++) {
-                				int loc = retPixel(i,j);
-                				if(toFillArray[loc]==3) {
-                					if(pixelsSelected * 10 < height*width) {
-                						toFillArray[loc] = 1;
-                					}
-                					else
-                						toFillArray[loc] = 2;
-                				}
-                			}
-                		}
+                		assignRegion();
 	                }
 	                else
 	                	toFillArray[pixel]=2;
                 } 
             }   
         }   
+    }
+    
+    private void assignRegion() {
+    	for(int i=0; i < height; i++) {
+			for(int j=0; j < width; j++) {
+				int loc = retPixel(i,j);
+				if(toFillArray[loc]==3) {
+					int max = 10;
+					int min = 1000;
+					if(pixelsSelected * max < height*width && pixelsSelected * min > height*width) {
+						toFillArray[loc] = 1;
+					}
+					else
+						toFillArray[loc] = 2;
+				}
+			}
+		}
     }
     
     private void paintRegionRed(){
@@ -192,7 +180,29 @@ public class MyImageObj extends JLabel {
                 }         
                 rgbim1 [col] = (r1 << 16) | (g1 << 8) | b1;  //build rgb for that pixel
             }
-            filteredbim.setRGB (0, row, width, 1, rgbim1, 0, width);  //modify this row to new rules
+            finalbim.setRGB (0, row, width, 1, rgbim1, 0, width);  //modify this row to new rules
+        }
+    }
+    
+    private void paintRegionRedWithBounds(){
+        int [] rgbim1 = new int [width];  //row of pixel data for inputBim
+        for (int row = 0; row < height; row++){  //for each row
+            filteredbim.getRGB (0, row, width, 1, rgbim1, 0, width);  //save that row's pixel data to array
+            for (int col = 0; col < width; col++){  //for each column (inside the current row)
+                int rgb1 = rgbim1 [col];  //grab pixel
+                int r1 = (rgb1 >> 16) & 255;  //split out red
+                int g1 = (rgb1 >> 8) & 255; //split out green
+                int b1 = rgb1 & 255; //split out blue
+                if(row >= selectionStart.y && row <= selectionEnd.y && col >= selectionStart.x && col <= selectionEnd.x) {
+	                if(toFillArray[retPixel(row,col)] == 1) {
+	                	r1=255;
+	                	g1=0;
+	                	b1=0;
+	                }    
+            	}
+                rgbim1 [col] = (r1 << 16) | (g1 << 8) | b1;  //build rgb for that pixel
+            }
+            finalbim.setRGB (0, row, width, 1, rgbim1, 0, width);  //modify this row to new rules
         }
     }
     
@@ -279,8 +289,17 @@ public class MyImageObj extends JLabel {
     public void paintComponent(Graphics g) {
         Graphics2D big = (Graphics2D) g;
         if (showfiltered)
-            big.drawImage(filteredbim, 0, 0, this);
+            big.drawImage(finalbim, 0, 0, this);
         else
             big.drawImage(bim, 0, 0, this);
+        if(selecting){  //as long as both points are defined
+            g.setColor(Color.RED);
+            int x=Math.min(selectionStart.x, selectionEnd.x);
+            int y=Math.min(selectionStart.y, selectionEnd.y);
+            int width=Math.abs(selectionStart.x - selectionEnd.x);
+            int height=Math.abs(selectionStart.y - selectionEnd.y);
+            g.drawRect(x,y,width,height);  //draw a red rectangle around the area the user is right click and drag selecting
+            g.setColor(Color.BLACK);
+        }
     }
 }
