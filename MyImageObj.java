@@ -14,7 +14,8 @@ public class MyImageObj extends JLabel {
     int [] rgbData;
     int height, width, pixelsSelected;
     private Point selectionStart, selectionEnd;
-    private boolean selecting = false;
+    private boolean selecting  = false;
+    private boolean filteredFlag = false;
     
     public void setSelection(Point start, Point end){
     	selecting=true;
@@ -86,6 +87,7 @@ public class MyImageObj extends JLabel {
         Graphics2D big = newbim.createGraphics();
         big.drawImage (bim, 0, 0, null);
         cop.filter(newbim, filteredbim);
+        filteredFlag = true;
         blackAndWhite();
         mapBounds();
         paintRegionRed();
@@ -164,6 +166,8 @@ public class MyImageObj extends JLabel {
     }
     
     private void paintRegionRed(){
+    	if(!filteredFlag)
+    		filterImage();
         int [] rgbim1 = new int [width];  //row of pixel data for inputBim
         for (int row = 0; row < height; row++){  //for each row
             filteredbim.getRGB (0, row, width, 1, rgbim1, 0, width);  //save that row's pixel data to array
@@ -185,6 +189,7 @@ public class MyImageObj extends JLabel {
     }
     
     private void paintRegionRedWithBounds(){
+    	filterImage();
         int [] rgbim1 = new int [width];  //row of pixel data for inputBim
         for (int row = 0; row < height; row++){  //for each row
             filteredbim.getRGB (0, row, width, 1, rgbim1, 0, width);  //save that row's pixel data to array
@@ -193,7 +198,25 @@ public class MyImageObj extends JLabel {
                 int r1 = (rgb1 >> 16) & 255;  //split out red
                 int g1 = (rgb1 >> 8) & 255; //split out green
                 int b1 = rgb1 & 255; //split out blue
-                if(row >= selectionStart.y && row <= selectionEnd.y && col >= selectionStart.x && col <= selectionEnd.x) {
+                int x1,x2,y1,y2;
+                if(selectionStart.x > selectionEnd.x) {
+                	x1 = selectionEnd.x;
+                	x2 = selectionStart.x;          
+                }
+                else {
+                	x2 = selectionEnd.x;
+                	x1 = selectionStart.x;  
+                }
+                if(selectionStart.y > selectionEnd.y) {
+                	y1 = selectionEnd.y;
+                	y2 = selectionStart.y;          
+                }
+                else {
+                	y2 = selectionEnd.y;
+                	y1 = selectionStart.y;   
+                }
+                	
+                if(row >= y1 && row <= y2 && col >= x1 && col <= x2) {
 	                if(toFillArray[retPixel(row,col)] == 1) {
 	                	r1=255;
 	                	g1=0;
