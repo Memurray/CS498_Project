@@ -4,16 +4,20 @@ import java.awt.image.*;
 import java.io.*;
 import javax.swing.*;
 import javax.imageio.*;
+import javax.swing.event.ChangeEvent;
+import javax.swing.event.ChangeListener;
 
 public class ImageFrame extends JFrame {
     // Instance variables
     private BufferedImage image;   // the image
     private MyImageObj view;       // a component in which to display an image
     private JLabel infoLabel;      // an informative label for the simple GUI
-    private JButton EdgeDetectButton;
+    private JButton EdgeDetectButton, FilterButton;
     private JButton ResetButton;
     private boolean isLDragging = false;
     private Point dragStart;
+    private JLabel toleranceLabel;
+    private JSlider toleranceSlider;
 
     // Constructor for the frame
     public ImageFrame () {
@@ -44,6 +48,8 @@ public class ImageFrame extends JFrame {
                             } catch (IOException e1){};
 
                             view.setImage(image);
+                            toleranceLabel.setText("  " + 55 + "% Boundary Tolerance");
+                            toleranceSlider.setValue(55);
                             view.showImage();
                             ImageFrame.super.pack(); //updates window size based on new image loaded
                         }
@@ -67,24 +73,54 @@ public class ImageFrame extends JFrame {
         infoLabel = new JLabel("Original Image");
         ResetButton = new JButton("Reset");
         EdgeDetectButton = new JButton("Edge Detect");
+        FilterButton = new JButton("Filter Image");
+        toleranceLabel = new JLabel("  55% Boundary Tolerance");
 
         ResetButton.addActionListener(
                 new ActionListener () {
                     public void actionPerformed (ActionEvent e) {
                         view.showImage();
+                        toleranceLabel.setText("  " + 55 + "% Boundary Tolerance");
+                        toleranceSlider.setValue(55);
                         infoLabel.setText("Original Image");
                     }
                 }
         );
 
+        FilterButton.addActionListener(
+                new ActionListener () {
+                    public void actionPerformed (ActionEvent e) {
+                        view.filterImage();
+                        view.showFiltered();
+                        infoLabel.setText("Filtered Image");
+                    }
+                }
+        );
+        
+        
         EdgeDetectButton.addActionListener(
                 new ActionListener () {
                     public void actionPerformed (ActionEvent e) {
                         view.filterImage();
-                        infoLabel.setText("Edge Detect");
+                        view.showEdge();
+                        infoLabel.setText("Edges Detected");
                     }
                 }
         );
+        
+        
+        toleranceSlider = new JSlider(SwingConstants.HORIZONTAL, 0, 100, 55 );
+        toleranceSlider.setMajorTickSpacing(25);
+        toleranceSlider.setPaintTicks(true);
+        toleranceSlider.setPaintLabels(true);
+        toleranceSlider.addChangeListener(new ChangeListener(){
+              public void stateChanged( ChangeEvent e ){  //when slider changed, update tick time
+                  toleranceLabel.setText("  " + toleranceSlider.getValue() + "% Boundary Tolerance");
+                  view.setTol(toleranceSlider.getValue());
+              }
+          }
+        );
+        
     }
 
     // This helper method adds all components to the content pane of the
@@ -94,12 +130,16 @@ public class ImageFrame extends JFrame {
 
         // Build first JPanel
         JPanel controlPanel = new JPanel();
-        GridLayout grid = new GridLayout (1, 3);
+        GridLayout grid = new GridLayout (2, 3);
         controlPanel.setLayout(grid);
+        controlPanel.add(FilterButton);
+        toleranceLabel.setHorizontalAlignment(JLabel.CENTER);
+        controlPanel.add(toleranceLabel);
+        controlPanel.add(ResetButton);
         controlPanel.add(EdgeDetectButton);
+        controlPanel.add(toleranceSlider);
         infoLabel.setHorizontalAlignment(JLabel.CENTER);
         controlPanel.add(infoLabel);
-        controlPanel.add(ResetButton);
 
         Container c = this.getContentPane();
         c.add(view, BorderLayout.EAST);
@@ -111,17 +151,21 @@ public class ImageFrame extends JFrame {
             public void mouseExited(MouseEvent e){}
             public void mouseEntered(MouseEvent e){}
             public void mouseReleased(MouseEvent e){
-                isLDragging = false;  
-                view.endSelection(); 
+                if(isLDragging) {
+	            	isLDragging = false;  
+	                view.endSelection();
+                }
+                
             } 
             public void mousePressed(MouseEvent e){
-                	isLDragging = true;  //now dragging
+                	
                 	dragStart = e.getPoint();               
             }
             public void mouseClicked(MouseEvent e){}
         });
         view.addMouseMotionListener(new MouseMotionListener(){
             public void mouseDragged(MouseEvent e) {
+            	isLDragging = true;  //now dragging
                 view.setSelection(dragStart,new Point(e.getPoint()));                
             }
             public void mouseMoved(MouseEvent e) {}
