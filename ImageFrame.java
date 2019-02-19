@@ -78,10 +78,9 @@ public class ImageFrame extends JFrame {
 
         ResetButton.addActionListener(
                 new ActionListener () {
-                    public void actionPerformed (ActionEvent e) {
-                        view.showImage();
-                        toleranceLabel.setText("  " + 55 + "% Boundary Tolerance");
+                    public void actionPerformed (ActionEvent e) {  
                         toleranceSlider.setValue(55);
+                        view.showImage();
                         infoLabel.setText("Original Image");
                     }
                 }
