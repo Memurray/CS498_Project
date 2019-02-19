@@ -10,7 +10,7 @@ public class MyImageObj extends JLabel {
     private BufferedImage filteredbim=null;
     private BufferedImage LPfilteredbim=null;
     private BufferedImage finalbim=null;
-    private boolean showfiltered=false;
+    private int showfiltered= 0;
     private int [] toFillArray;
     private int [] finalFillArray;
     private int [] rgbData, original_rgbData;
@@ -18,6 +18,7 @@ public class MyImageObj extends JLabel {
     private Point selectionStart, selectionEnd;
     private boolean selecting  = false;
     private boolean filteredFlag = false;
+    private double sliderTol;
     
     public void setSelection(Point start, Point end){
     	selecting=true;
@@ -39,19 +40,21 @@ public class MyImageObj extends JLabel {
     
     private final float[] LowPass =
         {       1/9f,1/9f,1/9f,
-        	1/9f,3/9f,1/9f,
-        	1/9f,1/9f,1/9f};
+        		1/9f,1/9f,1/9f,
+        		1/9f,1/9f,1/9f};
 
     // Default constructor
     public MyImageObj() {
-    }
-    
+    }    
 
     // This constructor stores a buffered image passed in as a parameter
     public MyImageObj(BufferedImage img) {
         bim = img;
         height = bim.getHeight();
         width = bim.getWidth();
+        selectionStart = new Point(0,0);
+        selectionEnd = new Point(width-1,height-1);
+        sliderTol = 140.0;
         filteredbim = new BufferedImage
                 (width, height, BufferedImage.TYPE_INT_RGB);
         finalbim = new BufferedImage
@@ -69,26 +72,43 @@ public class MyImageObj extends JLabel {
         bim = img;
         height = bim.getHeight();
         width = bim.getWidth();
+        selectionStart = new Point(0,0);
+        selectionEnd = new Point(width-1,height-1);
+        sliderTol = 140.0;
         filteredbim = new BufferedImage
                 (width, height, BufferedImage.TYPE_INT_RGB);
         finalbim = new BufferedImage
                 (width, height, BufferedImage.TYPE_INT_RGB);
         setPreferredSize(new Dimension(width, height));
-        showfiltered=false;
+        showfiltered=0;
         finalFillArray = new int [width*height];
         filteredFlag = false;
         this.repaint();
     }
+    
+    
 
     // accessor to get a handle to the bufferedimage object stored here
     public BufferedImage getImage() {
         return bim;
+    }
+    
+    public void setTol(int input) {
+    	sliderTol = (double) input * 2.55;
+    	if(!filteredFlag)
+    		filterImage();
+    	finalFillArray = new int [width*height];
+    	mapBounds();
+    	paintRegionRedWithBounds(); 
+        showfiltered=2;
+        this.repaint();
     }
 
 
     //  apply the blur operator
     public void filterImage() {
         if (bim == null) return;
+        finalFillArray = new int [width*height];
         Kernel kernel = new Kernel (3, 3, EdgeDetect);
         ConvolveOp cop = new ConvolveOp (kernel, ConvolveOp.EDGE_NO_OP, null);
 
@@ -103,8 +123,8 @@ public class MyImageObj extends JLabel {
         blackAndWhite();
         blackAndWhite2();
         mapBounds();
-        paintRegionRed();
-        showfiltered=true;
+        paintRegionRedWithBounds();
+        showfiltered=2;
         this.repaint();
     }
     
@@ -222,12 +242,14 @@ public class MyImageObj extends JLabel {
     private void assignRegion() {
     	int resultVal;
     	int max = 10;
-		int min = 1000;
+		int min = 10000;
     	if(pixelsSelected * max < height*width && pixelsSelected * min > height*width) { 
 			resultVal = 1;
-			//testIntersection(startY,startX);
-			finalBounds();	
+			//if(testIntersection(startY,startX) == 0)
+				finalBounds();	
     	}
+    	else if(pixelsSelected * min <= height*width)
+    		resultVal = 5;
 		else
 			resultVal = 4;
     	
@@ -253,11 +275,11 @@ public class MyImageObj extends JLabel {
         
         finalFillArray[retPixel(startY,startX)]=3;
         //System.out.print(r1 + " " + g1 + " " + b1 + "\n");
-    	expand(startY,startX,finalFillArray,original_rgbData,r1,g1,b1,140.0);   
+    	expand(startY,startX,finalFillArray,original_rgbData,r1,g1,b1,sliderTol);   
     	softenOut();
     }
     
-    private void paintRegionRed(){
+    private void paintRegionRed(){ //New design no longer requires this function, will be removed once sure it's unneeded
     	if(!filteredFlag)
     		filterImage();
         int [] rgbim1 = new int [width];  //row of pixel data for inputBim
@@ -323,7 +345,7 @@ public class MyImageObj extends JLabel {
     }
     
     private void expand(int rowIn, int colIn, int[] thisArray, int[] this_rgbData, int r, int g, int b, double tolerance) {
-    	int bound = 5;
+    	double bound = Math.max(5,sliderTol/30);
     	Stack<Integer> st = new Stack<Integer>();
     	int pixel = retPixel(rowIn,colIn);
     	st.push(pixel);
@@ -437,19 +459,32 @@ public class MyImageObj extends JLabel {
     //  show current image by a scheduled call to paint()
     public void showImage() {
         if (bim == null) return;
-        showfiltered=false;
+        showfiltered=0;
         filteredFlag = false;
+        selectionStart = new Point(0,0);
+        selectionEnd = new Point(width-1,height-1);
+        sliderTol = 140.0;
         this.repaint();
+    }
+    
+    public void showEdge() {
+    	showfiltered = 1;
+    }
+    
+    public void showFiltered() {
+    	showfiltered = 2;
     }
 
     //  get a graphics context and show either filtered image or
     //  regular image
     public void paintComponent(Graphics g) {
         Graphics2D big = (Graphics2D) g;
-        if (showfiltered)
-            big.drawImage(finalbim, 0, 0, this);
-        else
+        if (showfiltered == 0)
             big.drawImage(bim, 0, 0, this);
+        else if (showfiltered == 1)
+        	big.drawImage(filteredbim, 0, 0, this);
+        else
+            big.drawImage(finalbim, 0, 0, this);
         if(selecting){  //as long as both points are defined
             g.setColor(Color.RED);
             int x=Math.min(selectionStart.x, selectionEnd.x);
