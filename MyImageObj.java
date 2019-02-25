@@ -28,8 +28,13 @@ public class MyImageObj extends JLabel {
     }    
     
     public void endSelection() {
+    	if(!filteredFlag)
+    		filterImage();
     	selecting=false;
-    	paintRegionRedWithBounds();
+    	fixSelection();
+    	finalbim = copyImage(bim);
+    	catchHorizontal();
+    	//paintRegionRedWithBounds();
         repaint();
     }
 
@@ -57,8 +62,7 @@ public class MyImageObj extends JLabel {
         sliderTol = 140.0;
         filteredbim = new BufferedImage
                 (width, height, BufferedImage.TYPE_INT_RGB);
-        finalbim = new BufferedImage
-                (width, height, BufferedImage.TYPE_INT_RGB);
+        finalbim = copyImage(img);
         setPreferredSize(new Dimension(width, height));
         finalFillArray = new int [width*height];
         this.repaint();
@@ -77,8 +81,7 @@ public class MyImageObj extends JLabel {
         sliderTol = 140.0;
         filteredbim = new BufferedImage
                 (width, height, BufferedImage.TYPE_INT_RGB);
-        finalbim = new BufferedImage
-                (width, height, BufferedImage.TYPE_INT_RGB);
+        finalbim = copyImage(img);
         setPreferredSize(new Dimension(width, height));
         showfiltered=0;
         finalFillArray = new int [width*height];
@@ -93,18 +96,49 @@ public class MyImageObj extends JLabel {
         return bim;
     }
     
+    public static BufferedImage copyImage(BufferedImage source){
+        BufferedImage b = new BufferedImage(source.getWidth(), source.getHeight(), source.getType());
+        Graphics g = b.getGraphics();
+        g.drawImage(source, 0, 0, null);
+        g.dispose();
+        return b;
+    }
+    
     public void setTol(int input) {
     	sliderTol = (double) input * 2.55;
     	if(!filteredFlag)
     		filterImage();
     	finalFillArray = new int [width*height];
     	mapBounds();
-    	paintRegionRedWithBounds(); 
+    	 softenOut();
+         //paintRegionRedWithBounds();
+         catchHorizontal();
         showfiltered=2;
         this.repaint();
     }
 
-
+    private void fixSelection() {
+    	int x1,x2,y1,y2;
+        if(selectionStart.x > selectionEnd.x) {
+        	x1 = selectionEnd.x;
+        	x2 = selectionStart.x;          
+        }
+        else {
+        	x2 = selectionEnd.x;
+        	x1 = selectionStart.x;  
+        }
+        if(selectionStart.y > selectionEnd.y) {
+        	y1 = selectionEnd.y;
+        	y2 = selectionStart.y;          
+        }
+        else {
+        	y2 = selectionEnd.y;
+        	y1 = selectionStart.y;   
+        }
+        selectionStart = new Point(x1,y1);
+        selectionEnd = new Point(x2,y2);
+    }
+    
     //  apply the blur operator
     public void filterImage() {
         if (bim == null) return;
@@ -123,7 +157,9 @@ public class MyImageObj extends JLabel {
         blackAndWhite();
         blackAndWhite2();
         mapBounds();
-        paintRegionRedWithBounds();
+        softenOut();
+        //paintRegionRedWithBounds();
+        catchHorizontal();
         showfiltered=2;
         this.repaint();
     }
@@ -276,7 +312,7 @@ public class MyImageObj extends JLabel {
         finalFillArray[retPixel(startY,startX)]=3;
         //System.out.print(r1 + " " + g1 + " " + b1 + "\n");
     	expand(startY,startX,finalFillArray,original_rgbData,r1,g1,b1,sliderTol);   
-    	softenOut();
+    	
     }
     
     private void paintRegionRed(){ //New design no longer requires this function, will be removed once sure it's unneeded
@@ -441,15 +477,73 @@ public class MyImageObj extends JLabel {
     	}	
     }
     
+    private void cleanup() {
+    	for (int row = 0; row < height; row++){  //for each row
+            for (int col = 0; col < width; col++){
+            	int loc  = retPixel(row,col);
+            	if(finalFillArray[loc] == 3)
+            		finalFillArray[loc] = 1;
+            	else
+            		finalFillArray[loc] = 0;
+            }
+        }
+    }
+    
     private void softenOut() {
+    	cleanup();
+    	int tempFillArray[] = new int [width*height];
     	for (int row = 1; row < height-1; row++){  //for each row
             for (int col = 1; col < width-1; col++){
-            	int sum = finalFillArray[retPixel(row+1,col)] + finalFillArray[retPixel(row-1,col)] + finalFillArray[retPixel(row,col+1)] + finalFillArray[retPixel(row,col-1)];
-            	if (sum >= 9 )
-            		finalFillArray[retPixel(row,col)] = 3;
+            	int sum = finalFillArray[retPixel(row+1,col)] + finalFillArray[retPixel(row-1,col)] + finalFillArray[retPixel(row,col+1)] + finalFillArray[retPixel(row,col-1)] 
+            			+ finalFillArray[retPixel(row+1,col+1)] + finalFillArray[retPixel(row-1,col-1)] + finalFillArray[retPixel(row-1,col+1)] + finalFillArray[retPixel(row+1,col-1)];
+            	if (sum >= 1 || finalFillArray[retPixel(row,col)]==1)
+            		tempFillArray[retPixel(row,col)] = 3;
             }
     	}
+    	finalFillArray = tempFillArray;
     	
+    }
+    
+    private void catchHorizontal() {
+    	int state = 0;
+    	Point P1 = new Point();
+    	Point P2 = new Point();
+    	for (int row = selectionStart.y; row < selectionEnd.y; row++){  //for each row
+    		state = 0;
+            for (int col = selectionStart.x; col < selectionEnd.x; col++){
+            	if (finalFillArray[retPixel(row,col)] == 3  && state == 0) {
+            		state = 1;
+            		P1 = new Point(col-1,row);
+            	}
+            	else if (finalFillArray[retPixel(row,col)] != 3  && state == 1) {
+            		state = 0;
+            		P2 = new Point(col,row);
+            		hInterpolate(P1,P2);
+            	}
+            }
+    	}
+    }
+    
+    private void hInterpolate(Point P1, Point P2) {
+    	int [] rgbim1 = new int [width];  //row of pixel data for inputBim
+    	int row = P1.y;
+        finalbim.getRGB (0, row, width, 1, rgbim1, 0, width);  //save that row's pixel data to array
+        int rgb1 = rgbim1 [P1.x];  //grab pixel
+        int r1 = (rgb1 >> 16) & 255;  //split out red
+        int g1 = (rgb1 >> 8) & 255; //split out green
+        int b1 = rgb1 & 255; //split out blue
+        rgb1 = rgbim1 [P2.x];  //grab pixel
+        int r2 = (rgb1 >> 16) & 255;  //split out red
+        int g2 = (rgb1 >> 8) & 255; //split out green
+        int b2 = rgb1 & 255; //split out blue
+        int gap = P2.x - P1.x;
+        for (int i = 1; i < gap; i++) {
+        	int r3 = (int) (double)((r2-r1)*i/gap + r1) ;
+        	int g3 = (int) (double)((g2-g1)*i/gap + g1) ;
+        	int b3 = (int) (double)((b2-b1)*i/gap + b1) ;
+        	rgbim1 [P1.x + i] = (r3 << 16) | (g3 << 8) | b3;  //build rgb for that pixel
+        } 
+        finalbim.setRGB (0, row, width, 1, rgbim1, 0, width);  //modify this row to new rules
     }
     
     private int retPixel(int row, int col) {
@@ -464,6 +558,7 @@ public class MyImageObj extends JLabel {
         selectionStart = new Point(0,0);
         selectionEnd = new Point(width-1,height-1);
         sliderTol = 140.0;
+        finalbim = copyImage(bim);
         this.repaint();
     }
     
