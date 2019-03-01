@@ -97,7 +97,7 @@ public class MyImageObj extends JLabel {
     }
     
     public static BufferedImage copyImage(BufferedImage source){
-        BufferedImage b = new BufferedImage(source.getWidth(), source.getHeight(), source.getType());
+        BufferedImage b = new BufferedImage(source.getWidth(), source.getHeight(), BufferedImage.TYPE_INT_RGB);
         Graphics g = b.getGraphics();
         g.drawImage(source, 0, 0, null);
         g.dispose();
@@ -508,9 +508,9 @@ public class MyImageObj extends JLabel {
     	int state = 0;
     	Point P1 = new Point();
     	Point P2 = new Point();
-    	for (int row = selectionStart.y; row < selectionEnd.y; row++){  //for each row
+    	for (int row = selectionStart.y; row < Math.min(selectionEnd.y,height); row++){  //for each row
     		state = 0;
-            for (int col = selectionStart.x; col < selectionEnd.x; col++){
+            for (int col = selectionStart.x; col < Math.min(selectionEnd.x,width); col++){
             	if (finalFillArray[retPixel(row,col)] == 3  && state == 0) {
             		state = 1;
             		P1 = new Point(col-1,row);
@@ -536,13 +536,14 @@ public class MyImageObj extends JLabel {
         int r2 = (rgb1 >> 16) & 255;  //split out red
         int g2 = (rgb1 >> 8) & 255; //split out green
         int b2 = rgb1 & 255; //split out blue
-        int gap = P2.x - P1.x;
-        for (int i = 1; i < gap; i++) {
-        	int r3 = (int) (double)((r2-r1)*i/gap + r1) ;
-        	int g3 = (int) (double)((g2-g1)*i/gap + g1) ;
-        	int b3 = (int) (double)((b2-b1)*i/gap + b1) ;
+        double gap = P2.x - P1.x + 0.0;
+        for (int i = 1; i < gap; i++) {        	
+        	int r3 = (int) ((r2-r1)*i/gap + r1) ;
+        	int g3 = (int) ((g2-g1)*i/gap + g1) ;
+        	int b3 = (int) ((b2-b1)*i/gap + b1) ;
         	rgbim1 [P1.x + i] = (r3 << 16) | (g3 << 8) | b3;  //build rgb for that pixel
         } 
+        
         finalbim.setRGB (0, row, width, 1, rgbim1, 0, width);  //modify this row to new rules
     }
     
