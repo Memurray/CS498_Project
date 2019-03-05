@@ -19,6 +19,8 @@ public class MyImageObj extends JLabel {
     private boolean selecting  = false;
     private boolean filteredFlag = false;
     private double sliderTol;
+    private Stack<Integer> st;
+    private int softenCount = 2;
     
     public void setSelection(Point start, Point end){
     	selecting=true;
@@ -88,8 +90,7 @@ public class MyImageObj extends JLabel {
         filteredFlag = false;
         this.repaint();
     }
-    
-    
+        
 
     // accessor to get a handle to the bufferedimage object stored here
     public BufferedImage getImage() {
@@ -106,11 +107,12 @@ public class MyImageObj extends JLabel {
     
     public void setTol(int input) {
     	sliderTol = (double) input * 2.55;
+    	finalbim = copyImage(bim);
     	if(!filteredFlag)
     		filterImage();
     	finalFillArray = new int [width*height];
     	mapBounds();
-    	 softenOut();
+    	 softenOut(softenCount);
          //paintRegionRedWithBounds();
          catchHorizontal();
         showfiltered=2;
@@ -157,7 +159,7 @@ public class MyImageObj extends JLabel {
         blackAndWhite();
         blackAndWhite2();
         mapBounds();
-        softenOut();
+        softenOut(softenCount);
         //paintRegionRedWithBounds();
         catchHorizontal();
         showfiltered=2;
@@ -182,22 +184,9 @@ public class MyImageObj extends JLabel {
         for (int row = 0; row < height; row++){  //for each row
             filteredbim.getRGB (0, row, width, 1, rgbim1, 0, width);  //save that row's pixel data to array
             for (int col = 0; col < width; col++){  //for each column (inside the current row)
-                int rgb1 = rgbim1 [col];  //grab pixel
-                int r1 = (rgb1 >> 16) & 255;  //split out red
-                int g1 = (rgb1 >> 8) & 255; //split out green
-                int b1 = rgb1 & 255; //split out blue
-                int thres = 30;
-                if(r1 > thres || b1 > thres || g1 >thres) {
-                	r1=255;	
-                	b1 =255;
-                	g1=255;
-                }
-                else {
-                	r1=0;	
-                	b1 =0;
-                	g1=0;
-                }         
-                rgbim1 [col] = (r1 << 16) | (g1 << 8) | b1;  //build rgb for that pixel
+            	pixel p1 = new pixel(rgbim1 [col]);
+             	p1.allThreshold(30);                      
+                rgbim1 [col] = p1.build();  //build rgb for that pixel
             }
             filteredbim.setRGB (0, row, width, 1, rgbim1, 0, width);  //modify this row to new rules
         }
@@ -208,22 +197,9 @@ public class MyImageObj extends JLabel {
         for (int row = 0; row < height; row++){  //for each row
             LPfilteredbim.getRGB (0, row, width, 1, rgbim1, 0, width);  //save that row's pixel data to array
             for (int col = 0; col < width; col++){  //for each column (inside the current row)
-                int rgb1 = rgbim1 [col];  //grab pixel
-                int r1 = (rgb1 >> 16) & 255;  //split out red
-                int g1 = (rgb1 >> 8) & 255; //split out green
-                int b1 = rgb1 & 255; //split out blue
-                int thres = 60;
-                if(r1 > thres || b1 > thres || g1 >thres) {
-                	r1=255;	
-                	b1 =255;
-                	g1=255;
-                }
-                else {
-                	r1=0;	
-                	b1 =0;
-                	g1=0;
-                }         
-                rgbim1 [col] = (r1 << 16) | (g1 << 8) | b1;  //build rgb for that pixel
+                pixel p1 = new pixel(rgbim1 [col]);
+            	p1.allThreshold(60);                      
+                rgbim1 [col] = p1.build();  //build rgb for that pixel
             }
             LPfilteredbim.setRGB (0, row, width, 1, rgbim1, 0, width);  //modify this row to new rules
         }
@@ -239,15 +215,12 @@ public class MyImageObj extends JLabel {
             	int pixel = row*width + col;
             	pixelsSelected = 0;
                 if(toFillArray[pixel] == 0) {
-	            	int rgb1 = rgbData[pixel];  //grab pixel
-	                int r1 = (rgb1 >> 16) & 255;  //split out red
-	                int g1 = (rgb1 >> 8) & 255; //split out green
-	                int b1 = rgb1 & 255; //split out blue
-	                if(r1==0 && g1==0 && b1==0) {
+                	pixel p1 = new pixel(rgbData[pixel]);
+	                if(p1.r==0 && p1.g==0 && p1.b==0) {
 	                	toFillArray[pixel]=3;
 	                	startX = col+1;
 	                	startY = row+1;
-	                	expand(row,col,toFillArray,rgbData,0,0,0,0.0);
+	                	expand(row,col,toFillArray,rgbData,new pixel(),0.0);
                 		assignRegion();
 	                }
 	                else
@@ -263,16 +236,14 @@ public class MyImageObj extends JLabel {
     		int [] rgbim1 = new int [width];  //row of pixel data for inputBim
     		LPfilteredbim.getRGB (0, row, width, 1, rgbim1, 0, width);  //save that row's pixel data to array
 			for(int j=0; j < col+1; j+=2) {
-				int rgb1 = rgbim1 [j];  //grab pixel
-                int r1 = (rgb1 >> 16) & 255;  //split out red
-                if (r1 != lastVal) {
-                	lastVal = r1;
+				pixel p1 = new pixel(rgbim1[j]);
+                if (p1.r != lastVal) {
+                	lastVal = p1.r;
                 	count++;
                 }				
 			}
 			//System.out.print(count + "\n");
 			return count%2;
-
     }
     
     private void assignRegion() {
@@ -300,19 +271,12 @@ public class MyImageObj extends JLabel {
     
     
     private void finalBounds(){
-        original_rgbData = new int [width*height];  //row of pixel data for inputBim        
-
-        bim.getRGB (0, 0, width, height, original_rgbData, 0, width);
-
-    	int rgb1 = original_rgbData[retPixel(startY,startX)];  //grab pixel
-        int r1 = (rgb1 >> 16) & 255;  //split out red
-        int g1 = (rgb1 >> 8) & 255; //split out green
-        int b1 = rgb1 & 255; //split out blue
-        
+        original_rgbData = new int [width*height];  //row of pixel data for inputBim    
+        bim.getRGB (0, 0, width, height, original_rgbData, 0, width);    	
+    	pixel p1 = new pixel(original_rgbData[retPixel(startY,startX)]);
         finalFillArray[retPixel(startY,startX)]=3;
         //System.out.print(r1 + " " + g1 + " " + b1 + "\n");
-    	expand(startY,startX,finalFillArray,original_rgbData,r1,g1,b1,sliderTol);   
-    	
+    	expand(startY,startX,finalFillArray,original_rgbData,p1,sliderTol);       	
     }
     
     private void paintRegionRed(){ //New design no longer requires this function, will be removed once sure it's unneeded
@@ -322,17 +286,11 @@ public class MyImageObj extends JLabel {
         for (int row = 0; row < height; row++){  //for each row
             bim.getRGB (0, row, width, 1, rgbim1, 0, width);  //save that row's pixel data to array
             for (int col = 0; col < width; col++){  //for each column (inside the current row)
-                int rgb1 = rgbim1 [col];  //grab pixel
-                int r1 = (rgb1 >> 16) & 255;  //split out red
-                int g1 = (rgb1 >> 8) & 255; //split out green
-                int b1 = rgb1 & 255; //split out blue
-                
+                pixel p1 = new pixel(rgbim1 [col]);
                 if(finalFillArray[retPixel(row,col)] == 3) {
-                	r1=255;
-                	g1=0;
-                	b1=0;
+                	p1.makeRed();
                 }         
-                rgbim1 [col] = (r1 << 16) | (g1 << 8) | b1;  //build rgb for that pixel
+                rgbim1 [col] = p1.build();  //build rgb for that pixel
             }
             finalbim.setRGB (0, row, width, 1, rgbim1, 0, width);  //modify this row to new rules
         }
@@ -345,10 +303,8 @@ public class MyImageObj extends JLabel {
         for (int row = 0; row < height; row++){  //for each row
             bim.getRGB (0, row, width, 1, rgbim1, 0, width);  //save that row's pixel data to array
             for (int col = 0; col < width; col++){  //for each column (inside the current row)
+            	pixel p1 = new pixel(rgbim1 [col]);
                 int rgb1 = rgbim1 [col];  //grab pixel
-                int r1 = (rgb1 >> 16) & 255;  //split out red
-                int g1 = (rgb1 >> 8) & 255; //split out green
-                int b1 = rgb1 & 255; //split out blue
                 int x1,x2,y1,y2;
                 if(selectionStart.x > selectionEnd.x) {
                 	x1 = selectionEnd.x;
@@ -369,113 +325,63 @@ public class MyImageObj extends JLabel {
                 	
                 if(row >= y1 && row <= y2 && col >= x1 && col <= x2) {
 	                if(finalFillArray[retPixel(row,col)] == 3) {
-	                	r1=255;
-	                	g1=0;
-	                	b1=0;
+	                	p1.makeRed();
 	                }    
             	}
-                rgbim1 [col] = (r1 << 16) | (g1 << 8) | b1;  //build rgb for that pixel
+                rgbim1 [col] = p1.build();  //build rgb for that pixel
             }
             finalbim.setRGB (0, row, width, 1, rgbim1, 0, width);  //modify this row to new rules
         }
     }
     
-    private void expand(int rowIn, int colIn, int[] thisArray, int[] this_rgbData, int r, int g, int b, double tolerance) {
+    private void expand(int rowIn, int colIn, int[] thisArray, int[] this_rgbData, pixel p3, double tolerance) {
     	double bound = Math.max(5,sliderTol/30);
-    	Stack<Integer> st = new Stack<Integer>();
-    	int pixel = retPixel(rowIn,colIn);
-    	st.push(pixel);
-    	double call_colorOffset, neighbor_colorOffset;
+    	st = new Stack<Integer>();
+    	int startPixel = retPixel(rowIn,colIn);
+    	st.push(startPixel);
+    	
     	while(!st.empty()) {
     		int popped = st.pop();
     		int row = popped/width;
     		int col = popped - row*width;   
-    		
-    		int rgb2 = this_rgbData [retPixel(row,col)];  //grab pixel
-            int r2 = (rgb2 >> 16) & 255;  //split out red
-            int g2 = (rgb2 >> 8) & 255; //split out green
-            int b2 = rgb2 & 255; //split out blue
-            
-            int rgb3 = rgbData[retPixel(row,col)];  //grab pixel
-            int sum3 = (((rgb3 >> 16) & 255) + ((rgb3 >> 8) & 255) + (rgb3 & 255));
+    		pixel p2 = new pixel(this_rgbData [retPixel(row,col)]);
+            int sum3 = new pixel(rgbData[retPixel(row,col)]).sum();
                     	
         	if(row > 0 && thisArray[retPixel(row-1,col)] == 0) {
-        		int rgb1 = this_rgbData [retPixel(row-1,col)];  //grab pixel
-                int r1 = (rgb1 >> 16) & 255;  //split out red
-                int g1 = (rgb1 >> 8) & 255; //split out green
-                int b1 = rgb1 & 255; //split out blue
-                int rgb4 = rgbData [retPixel(row-1,col)];  //grab pixel
-                int sum4 = ((rgb4 >> 16) & 255) + ((rgb4 >> 8) & 255) + (rgb4 & 255);
-               
-                call_colorOffset = Math.sqrt((Math.pow(r-r1,2)+Math.pow(g-g1,2)+Math.pow(b-b1,2))/3);
-                neighbor_colorOffset = Math.sqrt((Math.pow(r2-r1,2)+Math.pow(g2-g1,2)+Math.pow(b2-b1,2))/3);
-                if(call_colorOffset <= tolerance && neighbor_colorOffset <= tolerance && toFillArray[retPixel(row-1,col)] != 4 && (sum3 != 765 || sum4 == 765 || (call_colorOffset <= bound && neighbor_colorOffset <= bound))) {
-                	thisArray[retPixel(row-1,col)]= 3;
-                	st.push(retPixel(row-1,col));
-                	pixelsSelected++;
-                }
-                else
-                	thisArray[retPixel(row-1,col)] = 2;
-        	}
-        	
+        		int pixelIndex = retPixel(row-1,col);
+        		expandHelper(pixelIndex,thisArray,this_rgbData,tolerance,p2,p3,bound,sum3);
+        	}        	
         	if(row < height - 1 && thisArray[retPixel(row+1,col)] == 0) {
-        		int rgb1 = this_rgbData [retPixel(row+1,col)];  //grab pixel
-                int r1 = (rgb1 >> 16) & 255;  //split out red
-                int g1 = (rgb1 >> 8) & 255; //split out green
-                int b1 = rgb1 & 255; //split out blue
-                int rgb4 = rgbData [retPixel(row+1,col)];  //grab pixel
-                int sum4 = ((rgb4 >> 16) & 255) + ((rgb4 >> 8) & 255) + (rgb4 & 255);
-                
-                call_colorOffset = Math.sqrt((Math.pow(r-r1,2)+Math.pow(g-g1,2)+Math.pow(b-b1,2))/3);
-                neighbor_colorOffset = Math.sqrt((Math.pow(r2-r1,2)+Math.pow(g2-g1,2)+Math.pow(b2-b1,2))/3);
-                if(call_colorOffset <= tolerance && neighbor_colorOffset <= tolerance && toFillArray[retPixel(row+1,col)] != 4 && (sum3 != 765 || sum4 == 765 || (call_colorOffset <= bound && neighbor_colorOffset <= bound))) {
-                	thisArray[retPixel(row+1,col)]= 3;
-                	st.push(retPixel(row+1,col));
-                	pixelsSelected++;
-                }
-                else
-                	thisArray[retPixel(row+1,col)] = 2;
-        	}
-        	
+        		int pixelIndex = retPixel(row+1,col);
+        		expandHelper(pixelIndex,thisArray,this_rgbData,tolerance,p2,p3,bound,sum3);
+        	}        	
           	if(col > 0 && thisArray[retPixel(row,col-1)] == 0) {
-        		int rgb1 = this_rgbData [retPixel(row,col-1)];  //grab pixel
-                int r1 = (rgb1 >> 16) & 255;  //split out red
-                int g1 = (rgb1 >> 8) & 255; //split out green
-                int b1 = rgb1 & 255; //split out blue
-                int rgb4 = rgbData [retPixel(row,col-1)];  //grab pixel
-                int sum4 = ((rgb4 >> 16) & 255) + ((rgb4 >> 8) & 255) + (rgb4 & 255);
-                
-                call_colorOffset = Math.sqrt((Math.pow(r-r1,2)+Math.pow(g-g1,2)+Math.pow(b-b1,2))/3);
-                neighbor_colorOffset = Math.sqrt((Math.pow(r2-r1,2)+Math.pow(g2-g1,2)+Math.pow(b2-b1,2))/3);
-                if(call_colorOffset <= tolerance && neighbor_colorOffset <= tolerance && toFillArray[retPixel(row,col-1)] != 4 && (sum3 != 765 || sum4 == 765 || (call_colorOffset <= bound && neighbor_colorOffset <= bound))) {
-                	thisArray[retPixel(row,col-1)]= 3;
-                	st.push(retPixel(row,col-1));
-                	pixelsSelected++;
-                }
-                else
-                	thisArray[retPixel(row,col-1)] = 2;
-        	}
-        	
+          		int pixelIndex = retPixel(row,col-1);
+          		expandHelper(pixelIndex,thisArray,this_rgbData,tolerance,p2,p3,bound,sum3);
+        	}        	
         	if(col < width - 1 && thisArray[retPixel(row,col+1)] == 0) {
-        		int rgb1 = this_rgbData [retPixel(row,col+1)];  //grab pixel
-                int r1 = (rgb1 >> 16) & 255;  //split out red
-                int g1 = (rgb1 >> 8) & 255; //split out green
-                int b1 = rgb1 & 255; //split out blue
-                int rgb4 = rgbData [retPixel(row,col+1)];  //grab pixel
-                int sum4 = ((rgb4 >> 16) & 255) + ((rgb4 >> 8) & 255) + (rgb4 & 255);
-                
-                call_colorOffset = Math.sqrt((Math.pow(r-r1,2)+Math.pow(g-g1,2)+Math.pow(b-b1,2))/3);
-                neighbor_colorOffset = Math.sqrt((Math.pow(r2-r1,2)+Math.pow(g2-g1,2)+Math.pow(b2-b1,2))/3);
-                if(call_colorOffset <= tolerance && neighbor_colorOffset <= tolerance && toFillArray[retPixel(row,col+1)] != 4 && (sum3 != 765 || sum4 == 765 || (call_colorOffset <= bound && neighbor_colorOffset <= bound))) {
-                	thisArray[retPixel(row,col+1)]= 3;
-                	st.push(retPixel(row,col+1));
-                	pixelsSelected++;
-                }
-                else
-                	thisArray[retPixel(row,col+1)] = 2;
+        		int pixelIndex = retPixel(row,col+1);
+        		expandHelper(pixelIndex,thisArray,this_rgbData,tolerance,p2,p3,bound,sum3);
         	}         	
     	}	
     }
+    
+    private void expandHelper(int pixelIndex,int[] thisArray,int[] this_rgbData,double tolerance, pixel p2, pixel p3, double bound, int sum3) {
+    	double call_colorOffset, neighbor_colorOffset;
+		pixel p1 = new pixel(this_rgbData [pixelIndex]);
+		pixel p4 = new pixel(rgbData [pixelIndex]);
+        int sum4 = p4.sum();
+        call_colorOffset = Math.sqrt((Math.pow(p3.r-p1.r,2)+Math.pow(p3.g-p1.g,2)+Math.pow(p3.b-p1.b,2))/3);
+        neighbor_colorOffset = Math.sqrt((Math.pow(p2.r-p1.r,2)+Math.pow(p2.g-p1.g,2)+Math.pow(p2.b-p1.b,2))/3);
+        if(call_colorOffset <= tolerance && neighbor_colorOffset <= tolerance && toFillArray[pixelIndex] != 4 && (sum3 != 765 || sum4 == 765 || (call_colorOffset <= bound && neighbor_colorOffset <= bound))) {
+        	thisArray[pixelIndex]= 3;
+        	st.push(pixelIndex);
+        	pixelsSelected++;
+        }
+        else
+        	thisArray[pixelIndex] = 2;
+    }
+
     
     private void cleanup() {
     	for (int row = 0; row < height; row++){  //for each row
@@ -490,18 +396,27 @@ public class MyImageObj extends JLabel {
     }
     
     private void softenOut() {
+    	softenOut(1);
+    }
+    
+    private void softenOut(int loopCount) {
     	cleanup();
-    	int tempFillArray[] = new int [width*height];
-    	for (int row = 1; row < height-1; row++){  //for each row
-            for (int col = 1; col < width-1; col++){
-            	int sum = finalFillArray[retPixel(row+1,col)] + finalFillArray[retPixel(row-1,col)] + finalFillArray[retPixel(row,col+1)] + finalFillArray[retPixel(row,col-1)] 
-            			+ finalFillArray[retPixel(row+1,col+1)] + finalFillArray[retPixel(row-1,col-1)] + finalFillArray[retPixel(row-1,col+1)] + finalFillArray[retPixel(row+1,col-1)];
-            	if (sum >= 1 || finalFillArray[retPixel(row,col)]==1)
-            		tempFillArray[retPixel(row,col)] = 3;
-            }
-    	}
-    	finalFillArray = tempFillArray;
-    	
+    	if(loopCount <1)
+    		loopCount = 1;
+    	else if(loopCount > 10)
+    		loopCount = 10;
+    	for (int i =0; i< loopCount; i++) {
+	    	int tempFillArray[] = new int [width*height];
+	    	for (int row = 1; row < height-1; row++){  //for each row
+	            for (int col = 1; col < width-1; col++){
+	            	int sum = finalFillArray[retPixel(row+1,col)] + finalFillArray[retPixel(row-1,col)] + finalFillArray[retPixel(row,col+1)] + finalFillArray[retPixel(row,col-1)] 
+	            			+ finalFillArray[retPixel(row+1,col+1)] + finalFillArray[retPixel(row-1,col-1)] + finalFillArray[retPixel(row-1,col+1)] + finalFillArray[retPixel(row+1,col-1)];
+	            	if (sum >= 1 || finalFillArray[retPixel(row,col)]==1)
+	            		tempFillArray[retPixel(row,col)] = 3;
+	            }
+	    	}
+	    	finalFillArray = tempFillArray;
+    	}    	
     }
     
     private void catchHorizontal() {
@@ -528,22 +443,15 @@ public class MyImageObj extends JLabel {
     	int [] rgbim1 = new int [width];  //row of pixel data for inputBim
     	int row = P1.y;
         finalbim.getRGB (0, row, width, 1, rgbim1, 0, width);  //save that row's pixel data to array
-        int rgb1 = rgbim1 [P1.x];  //grab pixel
-        int r1 = (rgb1 >> 16) & 255;  //split out red
-        int g1 = (rgb1 >> 8) & 255; //split out green
-        int b1 = rgb1 & 255; //split out blue
-        rgb1 = rgbim1 [P2.x];  //grab pixel
-        int r2 = (rgb1 >> 16) & 255;  //split out red
-        int g2 = (rgb1 >> 8) & 255; //split out green
-        int b2 = rgb1 & 255; //split out blue
+        pixel p1 = new pixel(rgbim1 [P1.x]);
+        pixel p2 = new pixel(rgbim1 [P2.x]);       
         double gap = P2.x - P1.x + 0.0;
         for (int i = 1; i < gap; i++) {        	
-        	int r3 = (int) ((r2-r1)*i/gap + r1) ;
-        	int g3 = (int) ((g2-g1)*i/gap + g1) ;
-        	int b3 = (int) ((b2-b1)*i/gap + b1) ;
+        	int r3 = (int) ((p2.r-p1.r)*i/gap + p1.r) ;
+        	int g3 = (int) ((p2.g-p1.g)*i/gap + p1.g) ;
+        	int b3 = (int) ((p2.b-p1.b)*i/gap + p1.b) ;
         	rgbim1 [P1.x + i] = (r3 << 16) | (g3 << 8) | b3;  //build rgb for that pixel
-        } 
-        
+        }         
         finalbim.setRGB (0, row, width, 1, rgbim1, 0, width);  //modify this row to new rules
     }
     
