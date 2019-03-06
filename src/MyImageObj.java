@@ -62,8 +62,7 @@ public class MyImageObj extends JLabel {
         selectionStart = new Point(0,0);
         selectionEnd = new Point(width-1,height-1);
         sliderTol = 140.0;
-        filteredbim = new BufferedImage
-                (width, height, BufferedImage.TYPE_INT_RGB);
+        filteredbim = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
         finalbim = copyImage(img);
         setPreferredSize(new Dimension(width, height));
         finalFillArray = new int [width*height];
@@ -81,8 +80,7 @@ public class MyImageObj extends JLabel {
         selectionStart = new Point(0,0);
         selectionEnd = new Point(width-1,height-1);
         sliderTol = 140.0;
-        filteredbim = new BufferedImage
-                (width, height, BufferedImage.TYPE_INT_RGB);
+        filteredbim = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
         finalbim = copyImage(img);
         setPreferredSize(new Dimension(width, height));
         showfiltered=0;
@@ -304,7 +302,6 @@ public class MyImageObj extends JLabel {
             bim.getRGB (0, row, width, 1, rgbim1, 0, width);  //save that row's pixel data to array
             for (int col = 0; col < width; col++){  //for each column (inside the current row)
             	pixel p1 = new pixel(rgbim1 [col]);
-                int rgb1 = rgbim1 [col];  //grab pixel
                 int x1,x2,y1,y2;
                 if(selectionStart.x > selectionEnd.x) {
                 	x1 = selectionEnd.x;
