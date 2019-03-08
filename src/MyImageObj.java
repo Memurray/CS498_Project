@@ -95,6 +95,10 @@ public class MyImageObj extends JLabel {
         return bim;
     }
     
+    public BufferedImage returnFinal() {
+    	return finalbim;
+    }
+    
     public static BufferedImage copyImage(BufferedImage source){
         BufferedImage b = new BufferedImage(source.getWidth(), source.getHeight(), BufferedImage.TYPE_INT_RGB);
         Graphics g = b.getGraphics();
@@ -379,7 +383,6 @@ public class MyImageObj extends JLabel {
         	thisArray[pixelIndex] = 2;
     }
 
-    
     private void cleanup() {
     	for (int row = 0; row < height; row++){  //for each row
             for (int col = 0; col < width; col++){
@@ -434,6 +437,7 @@ public class MyImageObj extends JLabel {
             	}
             }
     	}
+    	//catchVertical();
     }
     
     private void hInterpolate(Point P1, Point P2) {
@@ -452,12 +456,58 @@ public class MyImageObj extends JLabel {
         finalbim.setRGB (0, row, width, 1, rgbim1, 0, width);  //modify this row to new rules
     }
     
+    private void catchVertical() {
+    	int state = 0;
+    	Point P1 = new Point();
+    	Point P2 = new Point();
+    	int [] ffaTranspose = new int [width*height];
+    	int i = 0;
+    	for (int col = 0; col < width; col++){  //for each row
+            for (int row = 0; row < height; row++){
+            	ffaTranspose[i] = finalFillArray[retPixel(row,col)];   
+            	i++;
+            }            
+        }
+    	int [] rgbim1 = new int [width*height];  //row of pixel data for inputBim
+        finalbim.getRGB (0, 0, width, height, rgbim1, 0, width); 
+    	for (int row = selectionStart.x; row < Math.min(selectionEnd.x,width); row++){  //for each row
+    		state = 0;
+            for (int col = selectionStart.y; col < Math.min(selectionEnd.y,height); col++){
+            	if (ffaTranspose[row *height + col] == 3  && state == 0) {
+            		state = 1;
+            		P1 = new Point(row,col-1);
+            	}
+            	else if (ffaTranspose[row *height + col] != 3  && state == 1) {
+            		state = 0;
+            		P2 = new Point(row,col);
+            		vInterpolate(P1,P2, rgbim1);
+            	}
+            }
+    	}
+    	finalbim.setRGB (0, 0, width, height, rgbim1, 0, width);  //modify this row to new rules
+    }
+    
+    private void vInterpolate(Point P1, Point P2, int[] rgbim1) {
+        int col = P1.x;
+        pixel p1 = new pixel(rgbim1 [retPixel(P1.y,col)]);
+        pixel p2 = new pixel(rgbim1 [retPixel(P2.y,col)]);       
+        double gap = P2.y - P1.y + 0.0;
+        int startCoord = retPixel(P1.y,P1.x);
+        for (int i = 1; i < gap; i++) {  
+        	pixel p4 = new pixel(rgbim1 [startCoord+i*width]);
+        	int r = (int) (((p2.r-p1.r)*i/gap + p1.r)+p4.r)/2 ;
+        	int g = (int) (((p2.g-p1.g)*i/gap + p1.g)+p4.g)/2 ;
+        	int b = (int) (((p2.b-p1.b)*i/gap + p1.b)+p4.b)/2 ;
+        	pixel p3 = new pixel(r,g,b);
+        	rgbim1 [startCoord+i*width] = p3.build();  //build rgb for that pixel
+        }       
+    }
+    
     private int retPixel(int row, int col) {
     	return row*width + col;
     }
 
-    //  show current image by a scheduled call to paint()
-    public void showImage() {
+    public void resetImage() {
         if (bim == null) return;
         showfiltered=0;
         filteredFlag = false;
@@ -475,7 +525,7 @@ public class MyImageObj extends JLabel {
     public void showFiltered() {
     	showfiltered = 2;
     }
-
+    
     //  get a graphics context and show either filtered image or
     //  regular image
     public void paintComponent(Graphics g) {
