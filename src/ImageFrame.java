@@ -50,7 +50,7 @@ public class ImageFrame extends JFrame {
                             view.setImage(image);
                             toleranceLabel.setText("  " + 55 + "% Boundary Tolerance");
                             toleranceSlider.setValue(55);
-                            view.showImage();
+                            view.resetImage();
                             ImageFrame.super.pack(); //updates window size based on new image loaded
                         }
                     }
