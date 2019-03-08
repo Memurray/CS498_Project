@@ -35,6 +35,7 @@ public class ImageFrame extends JFrame {
         this.setJMenuBar (bar);
         JMenu fileMenu = new JMenu ("File");
         JMenuItem fileopen = new JMenuItem ("Open");
+        JMenuItem saveFile = new JMenuItem ("Save to File");
         JMenuItem fileexit = new JMenuItem ("Exit");
 
         fileopen.addActionListener(
@@ -56,6 +57,20 @@ public class ImageFrame extends JFrame {
                     }
                 }
         );
+        
+        saveFile.addActionListener(
+                new ActionListener () {
+                    public void actionPerformed (ActionEvent e) {
+                    	int retVal = fc.showSaveDialog(ImageFrame.this);
+                    	if(retVal==JFileChooser.APPROVE_OPTION){
+                    	    try {
+								ImageIO.write(view.returnFinal(), "png", fc.getSelectedFile());
+							} catch (IOException e2) {}    
+                    	 }
+                    }
+                } 
+        );
+        
         fileexit.addActionListener(
                 new ActionListener () {
                     public void actionPerformed (ActionEvent e) {
@@ -64,6 +79,7 @@ public class ImageFrame extends JFrame {
                 }
         );
         fileMenu.add(fileopen);
+        fileMenu.add(saveFile);
         fileMenu.add(fileexit);
         bar.add(fileMenu);
     }
@@ -80,7 +96,7 @@ public class ImageFrame extends JFrame {
                 new ActionListener () {
                     public void actionPerformed (ActionEvent e) {  
                         toleranceSlider.setValue(55);
-                        view.showImage();
+                        view.resetImage();
                         infoLabel.setText("Original Image");
                     }
                 }
