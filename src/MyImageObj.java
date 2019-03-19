@@ -21,6 +21,9 @@ public class MyImageObj extends JLabel {
     private double sliderTol;
     private Stack<Integer> st;
     private int softenCount = 2;
+    private int regionCount;
+    private Point textXY,textBottomLeft;
+    private int letterHeight=100;
     
     public void setSelection(Point start, Point end){
     	selecting=true;
@@ -30,8 +33,10 @@ public class MyImageObj extends JLabel {
     }    
     
     public void endSelection() {
-    	if(!filteredFlag)
+    	regionCount = 0;
+    	//if(!filteredFlag)
     		filterImage();
+    	
     	selecting=false;
     	fixSelection();
     	finalbim = copyImage(bim);
@@ -57,36 +62,15 @@ public class MyImageObj extends JLabel {
     // This constructor stores a buffered image passed in as a parameter
     public MyImageObj(BufferedImage img) {
         bim = img;
-        height = bim.getHeight();
-        width = bim.getWidth();
-        selectionStart = new Point(0,0);
-        selectionEnd = new Point(width-1,height-1);
-        sliderTol = 140.0;
-        filteredbim = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
-        finalbim = copyImage(img);
-        setPreferredSize(new Dimension(width, height));
-        finalFillArray = new int [width*height];
-        this.repaint();
+        resetImage();
     }
 
     // This mutator changes the image by resetting what is stored
     // The input parameter img is the new image;  it gets stored as an
     //     instance variable
     public void setImage(BufferedImage img) {
-        if (img == null) return;
-        bim = img;
-        height = bim.getHeight();
-        width = bim.getWidth();
-        selectionStart = new Point(0,0);
-        selectionEnd = new Point(width-1,height-1);
-        sliderTol = 140.0;
-        filteredbim = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
-        finalbim = copyImage(img);
-        setPreferredSize(new Dimension(width, height));
-        showfiltered=0;
-        finalFillArray = new int [width*height];
-        filteredFlag = false;
-        this.repaint();
+    	 bim = img;
+         resetImage();
     }
         
 
@@ -141,6 +125,12 @@ public class MyImageObj extends JLabel {
         }
         selectionStart = new Point(x1,y1);
         selectionEnd = new Point(x2,y2);
+    }
+    
+    public boolean inSelection() {
+    	if(startX >= selectionStart.x && startX <= selectionEnd.x && startY >= selectionStart.y && startY <= selectionEnd.y)
+    		return true;
+    	return false;
     }
     
     //  apply the blur operator
@@ -273,6 +263,12 @@ public class MyImageObj extends JLabel {
     
     
     private void finalBounds(){
+    	if(inSelection())
+    		regionCount++;
+    	if(regionCount == 1) {
+    		textXY = new Point(textBottomLeft);
+    		letterHeight=textXY.y-startY;
+    	}
         original_rgbData = new int [width*height];  //row of pixel data for inputBim    
         bim.getRGB (0, 0, width, height, original_rgbData, 0, width);    	
     	pixel p1 = new pixel(original_rgbData[retPixel(startY,startX)]);
@@ -340,7 +336,7 @@ public class MyImageObj extends JLabel {
     	st = new Stack<Integer>();
     	int startPixel = retPixel(rowIn,colIn);
     	st.push(startPixel);
-    	
+    	textBottomLeft = new Point(colIn,rowIn);
     	while(!st.empty()) {
     		int popped = st.pop();
     		int row = popped/width;
@@ -363,8 +359,12 @@ public class MyImageObj extends JLabel {
         	if(col < width - 1 && thisArray[retPixel(row,col+1)] == 0) {
         		int pixelIndex = retPixel(row,col+1);
         		expandHelper(pixelIndex,thisArray,this_rgbData,tolerance,p2,p3,bound,sum3);
-        	}         	
-    	}	
+        	} 
+        	if(col < textBottomLeft.x)
+        		textBottomLeft.x = col;
+        	if(row > textBottomLeft.y)
+        		textBottomLeft.y = row;
+    	}
     }
     
     private void expandHelper(int pixelIndex,int[] thisArray,int[] this_rgbData,double tolerance, pixel p2, pixel p3, double bound, int sum3) {
@@ -509,12 +509,18 @@ public class MyImageObj extends JLabel {
 
     public void resetImage() {
         if (bim == null) return;
-        showfiltered=0;
-        filteredFlag = false;
+        regionCount = 0;
+        height = bim.getHeight();
+        width = bim.getWidth();
         selectionStart = new Point(0,0);
         selectionEnd = new Point(width-1,height-1);
         sliderTol = 140.0;
+        filteredbim = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
         finalbim = copyImage(bim);
+        setPreferredSize(new Dimension(width, height));
+        showfiltered=0;
+        finalFillArray = new int [width*height];
+        filteredFlag = false;
         this.repaint();
     }
     
@@ -543,7 +549,15 @@ public class MyImageObj extends JLabel {
             int width=Math.abs(selectionStart.x - selectionEnd.x);
             int height=Math.abs(selectionStart.y - selectionEnd.y);
             g.drawRect(x,y,width,height);  //draw a red rectangle around the area the user is right click and drag selecting
-            g.setColor(Color.BLACK);
         }
+        
+        if(filteredFlag) {
+        	g.setColor(Color.BLUE);
+        	float fontSize = (float) (letterHeight*1.4);
+	        Font font = g.getFont().deriveFont(fontSize);
+	        g.setFont( font );
+	        g.drawString("TEXT",textXY.x,textXY.y); 
+        }
+        g.setColor(Color.BLACK);
     }
 }
