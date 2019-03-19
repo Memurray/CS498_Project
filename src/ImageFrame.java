@@ -6,6 +6,7 @@ import javax.swing.*;
 import javax.imageio.*;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
+import javax.swing.filechooser.FileNameExtensionFilter;
 
 public class ImageFrame extends JFrame {
     // Instance variables
@@ -41,6 +42,7 @@ public class ImageFrame extends JFrame {
         fileopen.addActionListener(
                 new ActionListener () {
                     public void actionPerformed (ActionEvent e) {
+                    	fc.setFileFilter(new FileNameExtensionFilter("Image files",new String[] { "png", "jpg", "jpeg", "gif" }));
                         int returnVal = fc.showOpenDialog(ImageFrame.this);
                         if (returnVal == JFileChooser.APPROVE_OPTION) {
                             File file = fc.getSelectedFile();
@@ -62,9 +64,10 @@ public class ImageFrame extends JFrame {
                 new ActionListener () {
                     public void actionPerformed (ActionEvent e) {
                     	int retVal = fc.showSaveDialog(ImageFrame.this);
+                    	File file = new File(fc.getSelectedFile() + ".png");
                     	if(retVal==JFileChooser.APPROVE_OPTION){
                     	    try {
-								ImageIO.write(view.returnFinal(), "png", fc.getSelectedFile());
+								ImageIO.write(view.returnFinal(), "png", file);
 							} catch (IOException e2) {}    
                     	 }
                     }
