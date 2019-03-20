@@ -9,7 +9,7 @@ public class TextSetWindow extends JFrame{
 	private TextField textbox;
 	private JButton okButton;
 	private JLabel topMessage; 
-	public TextSetWindow (MyImageObj MIO) {
+	public TextSetWindow (final MyImageObj MIO) {
         super("Set Text");	
         topMessage = new JLabel("Type what you want the text to read.");
         textbox = new TextField(MIO.getDisplayText());
