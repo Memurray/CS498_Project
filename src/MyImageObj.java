@@ -24,6 +24,9 @@ public class MyImageObj extends JLabel {
     private int regionCount;
     private Point textXY,textBottomLeft;
     private int letterHeight=100;
+    private boolean vIntBool = false;
+    private boolean textBool = false;
+    private String textFill = "Text";
     
     public void setSelection(Point start, Point end){
     	selecting=true;
@@ -65,14 +68,10 @@ public class MyImageObj extends JLabel {
         resetImage();
     }
 
-    // This mutator changes the image by resetting what is stored
-    // The input parameter img is the new image;  it gets stored as an
-    //     instance variable
     public void setImage(BufferedImage img) {
     	 bim = img;
          resetImage();
-    }
-        
+    }        
 
     // accessor to get a handle to the bufferedimage object stored here
     public BufferedImage getImage() {
@@ -90,6 +89,14 @@ public class MyImageObj extends JLabel {
         g.dispose();
         return b;
     }
+    
+    public void toggleVint() {vIntBool = !vIntBool;}
+    
+    public void toggleText() {textBool = !textBool;}
+    
+    public void setDisplayText(String in) {textFill = in;}
+    
+    public String getDisplayText() {return textFill;}
     
     public void setTol(int input) {
     	sliderTol = (double) input * 2.55;
@@ -242,7 +249,7 @@ public class MyImageObj extends JLabel {
     	int resultVal;
     	int max = 10;
 		int min = 10000;
-    	if(pixelsSelected * max < height*width && pixelsSelected * min > height*width) { 
+		if(pixelsSelected * max < height*width && pixelsSelected * min > height*width) {  
 			resultVal = 1;
 			//if(testIntersection(startY,startX) == 0)
 				finalBounds();	
@@ -259,8 +266,7 @@ public class MyImageObj extends JLabel {
 					toFillArray[loc] = resultVal;
 			}
 		}
-    }
-    
+    }    
     
     private void finalBounds(){
     	if(inSelection())
@@ -437,7 +443,8 @@ public class MyImageObj extends JLabel {
             	}
             }
     	}
-    	//catchVertical();
+    	if(vIntBool)
+    		catchVertical();
     }
     
     private void hInterpolate(Point P1, Point P2) {
@@ -551,12 +558,12 @@ public class MyImageObj extends JLabel {
             g.drawRect(x,y,width,height);  //draw a red rectangle around the area the user is right click and drag selecting
         }
         
-        if(filteredFlag) {
+        if(filteredFlag && textBool) {
         	g.setColor(Color.BLUE);
         	float fontSize = (float) (letterHeight*1.4);
 	        Font font = g.getFont().deriveFont(fontSize);
 	        g.setFont( font );
-	        g.drawString("TEXT",textXY.x,textXY.y); 
+	        g.drawString(textFill,textXY.x,textXY.y); 
         }
         g.setColor(Color.BLACK);
     }
