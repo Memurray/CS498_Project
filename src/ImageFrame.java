@@ -9,28 +9,26 @@ import javax.swing.event.ChangeListener;
 import javax.swing.filechooser.FileNameExtensionFilter;
 
 public class ImageFrame extends JFrame {
-    // Instance variables
-    private BufferedImage image;   // the image
-    private MyImageObj view;       // a component in which to display an image
-    private JLabel infoLabel;      // an informative label for the simple GUI
-    private JButton EdgeDetectButton, FilterButton;
-    private JButton ResetButton;
+    private BufferedImage image;   
+    private MyImageObj view;      
+    private JLabel infoLabel;      
+    private JButton EdgeDetectButton, FilterButton, ResetButton;
     private boolean isLDragging = false;
     private Point dragStart;
     private JLabel toleranceLabel;
     private JSlider toleranceSlider;
-    JCheckBoxMenuItem vInterpolateToggle;
-    JCheckBoxMenuItem textToggle;
+    JCheckBoxMenuItem vInterpolateToggle,textToggle;
 
     // Constructor for the frame
     public ImageFrame () {
-        super("Text Replace");				// call JFrame constructor
-        this.buildMenus();		// helper method to build menus
-        this.buildComponents();		// helper method to set up components
-        this.buildDisplay();		// Lay out the components on the display
-        this.buildMouseSettings();
+        super("Text Replace");		
+        this.buildMenus();			// Helper method to build menus
+        this.buildComponents();		// Helper method to set up components
+        this.buildDisplay();		// Helper method to configure GUI
+        this.buildMouseSettings();	// Helper method to configure mouse click responses
     }
 
+    //Put together the top bar menu system
     private void buildMenus () {
         final JFileChooser fc = new JFileChooser(".");
         JMenuBar bar = new JMenuBar();
@@ -126,6 +124,7 @@ public class ImageFrame extends JFrame {
         bar.add(optionsMenu);
     }
 
+    //Define GUI elements and their event handlers
     private void buildComponents() {
         view = new MyImageObj(readImage("textimage.png"));
         infoLabel = new JLabel("Original Image");
@@ -134,7 +133,7 @@ public class ImageFrame extends JFrame {
         FilterButton = new JButton("Filter Image");
         toleranceLabel = new JLabel("  55% Boundary Tolerance");
 
-        ResetButton.addActionListener(
+        ResetButton.addActionListener( //If Reset button clicked
                 new ActionListener () {
                     public void actionPerformed (ActionEvent e) {  
                     	if(textToggle.isSelected()) {
@@ -152,7 +151,7 @@ public class ImageFrame extends JFrame {
                 }
         );
 
-        FilterButton.addActionListener(
+        FilterButton.addActionListener(  //If Filter button clicked
                 new ActionListener () {
                     public void actionPerformed (ActionEvent e) {
                         view.filterImage();
@@ -163,7 +162,7 @@ public class ImageFrame extends JFrame {
         );
         
         
-        EdgeDetectButton.addActionListener(
+        EdgeDetectButton.addActionListener( //If Edge Detect button is clicked
                 new ActionListener () {
                     public void actionPerformed (ActionEvent e) {
                         view.filterImage();
@@ -173,6 +172,7 @@ public class ImageFrame extends JFrame {
                 }
         );       
         
+        // Set up Slider bar
         toleranceSlider = new JSlider(SwingConstants.HORIZONTAL, 0, 100, 55 );
         toleranceSlider.setMajorTickSpacing(25);
         toleranceSlider.setPaintTicks(true);
@@ -185,10 +185,34 @@ public class ImageFrame extends JFrame {
           }
         );
         
-    }
-
-    // This helper method adds all components to the content pane of the
-    // JFrame object.  Specific layout of components is controlled here
+    }   
+    
+    // Set up specific responses to different mouse events
+    private void buildMouseSettings(){
+        view.addMouseListener(new MouseListener(){ 
+            public void mouseExited(MouseEvent e){}
+            public void mouseEntered(MouseEvent e){}
+            public void mouseReleased(MouseEvent e){
+                if(isLDragging) {
+	            	isLDragging = false;  
+	                view.endSelection();
+                }                
+            } 
+            public void mousePressed(MouseEvent e){                	
+                	dragStart = e.getPoint();               
+            }
+            public void mouseClicked(MouseEvent e){}
+        });
+        view.addMouseMotionListener(new MouseMotionListener(){
+            public void mouseDragged(MouseEvent e) {
+            	isLDragging = true; 
+                view.setSelection(dragStart,new Point(e.getPoint()));                
+            }
+            public void mouseMoved(MouseEvent e) {}
+        });
+    } 
+    
+ // Set up GUI layout
     private void buildDisplay () {
         JPanel controlPanel = new JPanel();
         GridLayout grid = new GridLayout (2, 3);
@@ -206,30 +230,7 @@ public class ImageFrame extends JFrame {
         c.add(controlPanel, BorderLayout.SOUTH);
     }
     
-    private void buildMouseSettings(){
-        view.addMouseListener(new MouseListener(){  //track mouse interactions with left render panel
-            public void mouseExited(MouseEvent e){}
-            public void mouseEntered(MouseEvent e){}
-            public void mouseReleased(MouseEvent e){
-                if(isLDragging) {
-	            	isLDragging = false;  
-	                view.endSelection();
-                }                
-            } 
-            public void mousePressed(MouseEvent e){                	
-                	dragStart = e.getPoint();               
-            }
-            public void mouseClicked(MouseEvent e){}
-        });
-        view.addMouseMotionListener(new MouseMotionListener(){
-            public void mouseDragged(MouseEvent e) {
-            	isLDragging = true;  //now dragging
-                view.setSelection(dragStart,new Point(e.getPoint()));                
-            }
-            public void mouseMoved(MouseEvent e) {}
-        });
-    } 
-
+    // Handles processing image file into the usable BufferedImage format
     public BufferedImage readImage (String file) {
         Image image = Toolkit.getDefaultToolkit().getImage(file);
         MediaTracker tracker = new MediaTracker (new Component () {});
