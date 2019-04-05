@@ -7,53 +7,39 @@ import java.awt.image.ConvolveOp;
 import java.awt.image.Kernel;
 
 public class MyImageObj extends JLabel {
-    private BufferedImage bim=null;
-    private BufferedImage filteredbim=null;
-    private BufferedImage LPfilteredbim=null;
-    private BufferedImage finalbim=null;
+    private BufferedImageSP bim;
+    private BufferedImageSP filteredbim;
+    private BufferedImageSP finalbim;
     private int showfiltered= 0;
-    private int [] toFillArray,finalFillArray,rgbData, original_rgbData;
+    private int [] toFillArray;
     private int height, width, pixelsSelected, startX, startY;
     private Point selectionStart, selectionEnd;
     private boolean selecting  = false;
     private boolean filteredFlag = false;
     private double sliderTol;
     private Stack<Integer> st;
-    private int regionCount;
-    private Point textXY,textBottomLeft;
-    private int letterHeight=100;
     private boolean vIntBool = false;
     private boolean textBool = false;
     private String textFill = "Text";
-    
     private List<FloodRegion> fr;
     
     
-    private final float[] EdgeDetect =
-    {       -1,-1,-1,
-            -1,8,-1,
-            -1,-1,-1};
-
-    private final float[] LowPass =
-    {       1/9f,1/9f,1/9f,
-    		1/9f,1/9f,1/9f,
-    		1/9f,1/9f,1/9f};
-      
     public MyImageObj(BufferedImage img) {
-        bim = img;
+        bim = new BufferedImageSP(img);
         resetImage(); //Initializations in own method
     }
     
+    //********************************************************
     //Getters and Setters Start
     //********************************************************
     public void setImage(BufferedImage img) {
-    	bim = img;
+    	bim = new BufferedImageSP(img);
         resetImage();
     }   
 
-   public BufferedImage getImage() {return bim; }   
+   public BufferedImage getImage() {return bim.getBim(); }   
    
-   public BufferedImage returnFinal() { return finalbim; }
+   public BufferedImage returnFinal() { return finalbim.getBim(); }
     
     public void setSelection(Point start, Point end){
     	selecting=true;
@@ -68,21 +54,19 @@ public class MyImageObj extends JLabel {
     
     public void setTol(int input) {
     	sliderTol = (double) input * 2.55;
-    	finalbim = copyImage(bim);
+    	finalbim.copyBim(bim.getBim());
     	if(!filteredFlag)
     		filterImage();
-    	finalFillArray = new int [width*height];
     	mapBounds();
-    	softenOut(2);
-        catchHorizontal();
         showfiltered=2;
         this.repaint();
-    }
-    
+    }  
+    //********************************************************
     //Getters and Setters End
     //********************************************************
-   
     
+   
+    //********************************************************
     //Toggle state variables based on GUI menu clicks
     //********************************************************
     public void toggleVint() {vIntBool = !vIntBool;} 
@@ -95,53 +79,37 @@ public class MyImageObj extends JLabel {
     public void resetImage() {
         if (bim == null) return;
         fr = new ArrayList<FloodRegion> ();
-        regionCount = 0;
         height = bim.getHeight();
         width = bim.getWidth();
         selectionStart = new Point(0,0);
         selectionEnd = new Point(width-1,height-1);
         sliderTol = 102.0;
-        filteredbim = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
-        finalbim = copyImage(bim);
+        filteredbim = new BufferedImageSP(bim.getBim());
+        finalbim = new BufferedImageSP(bim.getBim());
         setPreferredSize(new Dimension(width, height));
         showfiltered=0;
-        finalFillArray = new int [width*height];
         filteredFlag = false;
         this.repaint();
     }      
     
     //When mouse press is released, update rendering to reflect new boundaries 
     public void endSelection() {
-    	regionCount = 0;
+    	fr = new ArrayList<FloodRegion> ();
     	selecting=false;
-    	filterImage();      	
     	fixSelection();
-    	finalbim = copyImage(bim);
-    	catchHorizontal();
+    	filterImage();   
+    	finalbim.copyBim(bim.getBim());
         repaint();
     }
 
     //Core driving function, 
-    //********	in need of cleanup **************
     public void filterImage() {
         if (bim == null) return;
-        finalFillArray = new int [width*height];
-        Kernel kernel = new Kernel (3, 3, EdgeDetect);
-        ConvolveOp cop = new ConvolveOp (kernel, ConvolveOp.EDGE_NO_OP, null);
-        BufferedImage newbim = new BufferedImage
-                (bim.getWidth(), bim.getHeight(),
-                        BufferedImage.TYPE_INT_RGB);
-        Graphics2D big = newbim.createGraphics();
-        big.drawImage (bim, 0, 0, null);
-        cop.filter(newbim, filteredbim);
-        LPfilteredbim = lowPassImage();
+        filteredbim.edgeDetect();
+        filteredbim.blackAndWhite(30);
         filteredFlag = true;
-        blackAndWhite(filteredbim,30);
-        blackAndWhite(LPfilteredbim,60);
-        mapBounds();
-        softenOut(2);
-        catchHorizontal();
-        showfiltered=2;
+        mapBounds();        
+        showFiltered();
         this.repaint();
     }
     
@@ -175,36 +143,9 @@ public class MyImageObj extends JLabel {
     	return false;
     }    
     
-    //Apply the low pass kernel to the entire image
-    public BufferedImage lowPassImage() {
-        Kernel kernel = new Kernel (3, 3, LowPass);
-        ConvolveOp cop = new ConvolveOp (kernel, ConvolveOp.EDGE_NO_OP, null);
-        BufferedImage newbim = new BufferedImage
-                (bim.getWidth(), bim.getHeight(),
-                        BufferedImage.TYPE_INT_RGB);
-        Graphics2D big = newbim.createGraphics();
-        big.drawImage (bim, 0, 0, null);
-        cop.filter(filteredbim, newbim);
-        return newbim;
-    }
-    
-    //Apply threshold to input BufferedImage
-    private void blackAndWhite(BufferedImage chosen_bim, int threshold){
-        int [] rgbim1 = new int [width];  //row of pixel data for inputBim
-        for (int row = 0; row < height; row++){  //for each row
-        	chosen_bim.getRGB (0, row, width, 1, rgbim1, 0, width);  //save that row's pixel data to array
-            for (int col = 0; col < width; col++){  //for each column (inside the current row)
-            	pixel p1 = new pixel(rgbim1 [col]);
-             	p1.allThreshold(threshold);                      
-                rgbim1 [col] = p1.build();  //build rgb for that pixel
-            }
-            chosen_bim.setRGB (0, row, width, 1, rgbim1, 0, width);  //modify this row to new rules
-        }
-    }
-    
     //Run through each pixel in edge detect image, flood filling regions, regions visited tracked in toFillArray to prevent revisiting already catagorized pixels
     private void mapBounds(){
-        rgbData = new int [width*height];  //row of pixel data for inputBim        
+        int [] rgbData = new int [width*height];  //row of pixel data for inputBim        
         toFillArray = new int [width*height];           
         filteredbim.getRGB (0, 0, width, height, rgbData, 0, width);
         for (int row = 0; row < height; row++){  //for each row
@@ -254,17 +195,9 @@ public class MyImageObj extends JLabel {
     //Perform flood fill region select on the unprocessed image
     private void finalBounds(){
     	if(inSelection())  {
-    		regionCount++;
-	    	if(regionCount == 1) {  //if first region found in user selection area, grab information required for text rendering placement
-	    		textXY = new Point(textBottomLeft);
-	    		letterHeight=textXY.y-startY;
-	    	}
-	        original_rgbData = new int [width*height];   
-	        bim.getRGB (0, 0, width, height, original_rgbData, 0, width);    	
-	    	pixel p1 = new pixel(original_rgbData[retPixel(startX,startY)]);
-	        finalFillArray[retPixel(startX,startY)]=3;
-	    	expand(startY,startX,finalFillArray,original_rgbData,p1,sliderTol);   //flood fill starting from current inspection pixel on original image    
 	    	fr.add(new FloodRegion(toFillArray,bim,new Point(startX,startY),sliderTol));   
+	    	if(vIntBool) //If vertical interpolation is turned on
+	    		fr.get(fr.size()-1).catchVertical();
     	}
     }
        
@@ -273,7 +206,6 @@ public class MyImageObj extends JLabel {
     	st = new Stack<Integer>();
     	int startPixel = retPixel(colIn,rowIn);
     	st.push(startPixel);
-    	textBottomLeft = new Point(colIn,rowIn);
     	while(!st.empty()) {
     		int popped = st.pop();
     		int row = popped/width;
@@ -296,14 +228,10 @@ public class MyImageObj extends JLabel {
         		int pixelIndex = retPixel(col+1,row);
         		expandHelper(pixelIndex,thisArray,this_rgbData,tolerance,p2,p1);
         	} 
-        	if(col < textBottomLeft.x)
-        		textBottomLeft.x = col;
-        	if(row > textBottomLeft.y)
-        		textBottomLeft.y = row;
     	}
     }
     
-    //Complicated, will attempt to refactor more later
+    //Repeated code in expand function pushed off to own function
     private void expandHelper(int pixelIndex,int[] thisArray,int[] this_rgbData,double tolerance, pixel p2, pixel p3) {
     	double call_colorOffset, neighbor_colorOffset;
 		pixel p1 = new pixel(this_rgbData [pixelIndex]);
@@ -317,133 +245,6 @@ public class MyImageObj extends JLabel {
         else
         	thisArray[pixelIndex] = 2;
     }
-
-    //This method only exists because of a poor decision to make finalFillArray = 3, the pixel marker for assumed as text
-    private void cleanup() {
-    	for (int row = 0; row < height; row++){ 
-            for (int col = 0; col < width; col++){
-            	int loc  = retPixel(col,row);
-            	if(finalFillArray[loc] == 3)
-            		finalFillArray[loc] = 1;
-            	else
-            		finalFillArray[loc] = 0;
-            }
-        }
-    }
-      
-    //Flagged pixels to be overwritten are in the finalFillArray
-    //This method expand those flagged pixels to include neighbors of flagged pixels
-    //loopCount effectively controls how many pixels in each direction are added to original flagged pixels
-    private void softenOut(int loopCount) {
-    	cleanup();
-    	if(loopCount <1)
-    		loopCount = 1;
-    	else if(loopCount > 10)
-    		loopCount = 10;
-    	for (int i =0; i< loopCount; i++) {
-	    	int tempFillArray[] = new int [width*height];
-	    	for (int row = 1; row < height-1; row++){  //for each row
-	            for (int col = 1; col < width-1; col++){
-	            	int sum = finalFillArray[retPixel(col,row+1)] + finalFillArray[retPixel(col,row-1)] + finalFillArray[retPixel(col+1,row)] + finalFillArray[retPixel(col-1,row)] 
-	            			+ finalFillArray[retPixel(col+1,row+1)] + finalFillArray[retPixel(col-1,row-1)] + finalFillArray[retPixel(col+1,row-1)] + finalFillArray[retPixel(col-1,row+1)];
-	            	if (sum >= 1 || finalFillArray[retPixel(col,row)]==1)
-	            		tempFillArray[retPixel(col,row)] = 3;
-	            }
-	    	}
-	    	finalFillArray = tempFillArray;
-    	}    	
-    }
-    
-    //Find starting and ending x coordinate that will be overwritten for background replacement 
-    private void catchHorizontal() {
-    	int state = 0;
-    	Point P1 = new Point();
-    	Point P2 = new Point();
-    	for (int row = selectionStart.y; row < Math.min(selectionEnd.y,height); row++){  //for each row
-    		state = 0;
-            for (int col = selectionStart.x; col < Math.min(selectionEnd.x,width); col++){
-            	if (finalFillArray[retPixel(col,row)] == 3  && state == 0) {
-            		state = 1;
-            		P1 = new Point(col-1,row);
-            	}
-            	else if (finalFillArray[retPixel(col,row)] != 3  && state == 1) {
-            		state = 0;
-            		P2 = new Point(col,row);
-            		hInterpolate(P1,P2);
-            	}
-            }
-    	}
-    	if(vIntBool) //If vertical interpolation is turned on
-    		catchVertical();
-    }
-    
-    //interpolate between the pixel color at P1 and P2 and write to output image
-    private void hInterpolate(Point P1, Point P2) {
-    	int [] rgbim1 = new int [width];  //row of pixel data for inputBim
-    	int row = P1.y;
-        finalbim.getRGB (0, row, width, 1, rgbim1, 0, width);  //save that row's pixel data to array
-        pixel p1 = new pixel(rgbim1 [P1.x]);
-        pixel p2 = new pixel(rgbim1 [P2.x]);       
-        double gap = P2.x - P1.x + 0.0;
-        for (int i = 1; i < gap; i++) {        	
-        	int r3 = (int) ((p2.r-p1.r)*i/gap + p1.r) ;
-        	int g3 = (int) ((p2.g-p1.g)*i/gap + p1.g) ;
-        	int b3 = (int) ((p2.b-p1.b)*i/gap + p1.b) ;
-        	rgbim1 [P1.x + i] = (r3 << 16) | (g3 << 8) | b3;  //build rgb for that pixel
-        }         
-        finalbim.setRGB (0, row, width, 1, rgbim1, 0, width);  //modify this row to new rules
-    }
-    
-  //Find starting and ending y coordinate that will be overwritten for background replacement 
-    private void catchVertical() {
-    	int state = 0;
-    	Point P1 = new Point();
-    	Point P2 = new Point();
-    	int [] ffaTranspose = new int [width*height];
-    	int i = 0;
-    	
-    	//Transpose array to reduce cache inefficiency of seeking through array rows before columns
-    	for (int col = 0; col < width; col++){ 
-            for (int row = 0; row < height; row++){
-            	ffaTranspose[i] = finalFillArray[retPixel(col,row)];   
-            	i++;
-            }            
-        }
-    	int [] rgbim1 = new int [width*height];  //row of pixel data for inputBim
-        finalbim.getRGB (0, 0, width, height, rgbim1, 0, width); 
-    	for (int row = selectionStart.x; row < Math.min(selectionEnd.x,width); row++){  //for each row
-    		state = 0;
-            for (int col = selectionStart.y; col < Math.min(selectionEnd.y,height); col++){
-            	if (ffaTranspose[row *height + col] == 3  && state == 0) {
-            		state = 1;
-            		P1 = new Point(row,col-1);
-            	}
-            	else if (ffaTranspose[row *height + col] != 3  && state == 1) {
-            		state = 0;
-            		P2 = new Point(row,col);
-            		vInterpolate(P1,P2, rgbim1);
-            	}
-            }
-    	}
-    	finalbim.setRGB (0, 0, width, height, rgbim1, 0, width);  //modify this row to new rules
-    }
-    
-   //interpolate between the pixel color at P1 and P2 and write to output image
-    private void vInterpolate(Point P1, Point P2, int[] rgbim1) {
-        int col = P1.x;
-        pixel p1 = new pixel(rgbim1 [retPixel(col,P1.y)]);
-        pixel p2 = new pixel(rgbim1 [retPixel(col,P2.y)]);       
-        double gap = P2.y - P1.y + 0.0;
-        int startCoord = retPixel(P1.x,P1.y);
-        for (int i = 1; i < gap; i++) {  
-        	pixel p4 = new pixel(rgbim1 [startCoord+i*width]);
-        	int r = (int) (((p2.r-p1.r)*i/gap + p1.r)+p4.r)/2 ;
-        	int g = (int) (((p2.g-p1.g)*i/gap + p1.g)+p4.g)/2 ;
-        	int b = (int) (((p2.b-p1.b)*i/gap + p1.b)+p4.b)/2 ;
-        	pixel p3 = new pixel(r,g,b);
-        	rgbim1 [startCoord+i*width] = p3.build();  //build rgb for that pixel
-        }       
-    }
     
     private int retPixel(int col, int row) {  //common operation for getting 1-d array location from 2-d input criteria
     	return row*width + col;
@@ -454,23 +255,15 @@ public class MyImageObj extends JLabel {
     }
     
     private BufferedImage buildComp() {
-    	BufferedImage bim = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+    	BufferedImage compbim = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);	
     	int [] rgbim1 = new int [width*height];  //row of pixel data for inputBim
-    	
-    	//****************************************************************
-    	//THIS LINE IS INTENTIONALLY WRONG TO DEMONSTRATE WHAT THE CODE IS DOING
-    	//REALISTICALLY IT SHOULD BE this.bim (or not reuse var names)
         bim.getRGB (0, 0, width, height, rgbim1, 0, width); 
-        //****************************************************************
     	for (int it = 0; it < fr.size(); it++) {
 	    	FloodRegion f = fr.get(it);
 	    	Point dims = f.getDim();
-	    	BufferedImage bim2 = f.getbim();
-	    	
+	    	BufferedImage bim2 = f.getbim();	    	
 	        int [] rgbim2 = new int [dims.x*dims.y];  //row of pixel data for inputBim
 	        bim2.getRGB (0, 0, dims.x, dims.y, rgbim2, 0, dims.x);
-	        
-	        
 	        int i_dest, i_source;
 			for(int i = 0; i < dims.y; i++) {
 				for(int j = 0; j < dims.x; j++) {
@@ -479,20 +272,11 @@ public class MyImageObj extends JLabel {
 					rgbim1[i_dest] = rgbim2[i_source];				
 				}
 			}
-    	}
-		bim = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);		
-		bim.setRGB (0, 0, width, height, rgbim1, 0, width); 
-		return bim;
+    	}   		
+		compbim.setRGB (0, 0, width, height, rgbim1, 0, width); 
+		return compbim;
     }
-
-    //Safer way to copy BufferedImage than default assignment
-    public static BufferedImage copyImage(BufferedImage source){
-        BufferedImage b = new BufferedImage(source.getWidth(), source.getHeight(), BufferedImage.TYPE_INT_RGB);
-        Graphics g = b.getGraphics();
-        g.drawImage(source, 0, 0, null);
-        g.dispose();
-        return b;
-    }     
+       
     
     //Aliasing arbitrary display option numbers with more sensible method names.
     //***************************************************
@@ -504,11 +288,11 @@ public class MyImageObj extends JLabel {
     public void paintComponent(Graphics g) {
         Graphics2D big = (Graphics2D) g;
         if (showfiltered == 0)
-            big.drawImage(bim, 0, 0, this);
+            big.drawImage(bim.getBim(), 0, 0, this);
         else if (showfiltered == 1)
-        	big.drawImage(buildComp(), 0, 0, this);
+        	big.drawImage(filteredbim.getBim(), 0, 0, this);
         else
-            big.drawImage(finalbim, 0, 0, this);
+            big.drawImage(buildComp(), 0, 0, this);
         if(selecting){  //as long as both points are defined
             g.setColor(Color.RED);
             int x=Math.min(selectionStart.x, selectionEnd.x);
@@ -518,12 +302,13 @@ public class MyImageObj extends JLabel {
             g.drawRect(x,y,width,height);  //draw a red rectangle around the area the user is right click and drag selecting
         }
         
-        if(filteredFlag && textBool) {  //Text rendering rules
+        if(filteredFlag && textBool && fr.size()>0) {  //Text rendering rules
         	g.setColor(Color.BLUE);
-        	float fontSize = (float) (letterHeight*1.4);
+        	FloodRegion f = fr.get(0);
+        	float fontSize = (float) (f.getTextHeight()*1.4);
 	        Font font = g.getFont().deriveFont(fontSize);
 	        g.setFont( font );
-	        g.drawString(textFill,textXY.x,textXY.y); 
+	        g.drawString(textFill,f.getTextAnchor().x,f.getTextAnchor().y); 
         }
         g.setColor(Color.BLACK);
     }
