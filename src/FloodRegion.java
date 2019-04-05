@@ -1,4 +1,3 @@
-import java.awt.Color;
 import java.awt.Point;
 import java.awt.image.BufferedImage;
 import java.util.Stack;
@@ -15,13 +14,9 @@ public class FloodRegion {
 	private Stack<Integer> st;	
 	private int padding = 4;	
 	
-	public FloodRegion(Point startCoord, double tolerance) {
-		process(startCoord,tolerance);
-	}
+	public FloodRegion(Point startCoord, double tolerance) {process(startCoord,tolerance);}
 	
-	public FloodRegion(int[] fillArray, BufferedImage bim) {
-		setupStatic(fillArray,bim);
-	}
+	public FloodRegion(int[] fillArray, BufferedImage bim) {setupStatic(fillArray,bim);}
 	
 	public FloodRegion(int[] fillArray, BufferedImage bim,Point startCoord, double tolerance) {
 		setupStatic(fillArray,bim);
@@ -49,20 +44,18 @@ public class FloodRegion {
         source_bim.getRGB (0, 0, source_width, source_height, source_rgbData, 0, source_width); 
 	}
 	
-	public BufferedImage getbim() {
-		return bim;
-	}
-	public Point getTopLeft() {
-		return topLeft;
-	}
-	
-	public Point getBottomRight() {
-		return bottomRight;
-	}
-	
-	public Point getDim() {
-		return new Point(width,height);
-	}
+	//********************************************************
+    //Getters Start
+    //********************************************************
+	public BufferedImage getbim() {	return bim;	}
+	public Point getTopLeft() {	return topLeft; }	
+	public Point getBottomRight() {	return bottomRight;}	
+	public Point getDim() {return new Point(width,height);}	
+	public int getTextHeight() {return height - padding*2;}	
+	public Point getTextAnchor() {return new Point(topLeft.x+padding,bottomRight.y-padding);}
+    //********************************************************
+    //Getters End
+    //********************************************************
 	
 	private void buildFillArray(int[] temp_fillArray) {
 		int it_fillArray, it_tempArray;		
@@ -94,8 +87,7 @@ public class FloodRegion {
 		topLeft.y = Math.max(0, topLeft.y - padding);		
 		bottomRight.x = Math.min(source_width-1, bottomRight.x + padding);
 		bottomRight.y = Math.min(source_height-1, bottomRight.y + padding);
-	}
-	
+	}	
 	
 	private int[] expand(Point startCoord, double tolerance) {
 		 	int startPixel = retPixel(startCoord.x,startCoord.y,source_width);	                
@@ -103,11 +95,9 @@ public class FloodRegion {
 	        int [] temp_fillArray= new int [source_width*source_height]; 
 	        temp_fillArray[startPixel]=1;	        
 	        topLeft = new Point(startCoord);	
-	        bottomRight = new Point(startCoord);
-	        
+	        bottomRight = new Point(startCoord);	        
 	    	st = new Stack<Integer>();
-	    	st.push(startPixel);
-	    	
+	    	st.push(startPixel);	    	
 	    	while(!st.empty()) {
 	    		int popped = st.pop();
 	    		int row = popped/source_width;
@@ -156,11 +146,11 @@ public class FloodRegion {
 	        return returnVal;	        
 	    }
 	    
-	    private int retPixel(int col, int row, int width) {  //common operation for getting 1-d array location from 2-d input criteria
+	    private int retPixel(int col, int row, int width) {  //common operation for getting 1-d array location from 2-d input criteria using arguement width
 	    	return row*width + col;
 	    }	
 	    
-	    private int retPixel(int col, int row) {  //common operation for getting 1-d array location from 2-d input criteria
+	    private int retPixel(int col, int row) {  //common operation for getting 1-d array location from 2-d input criteria, using object width
 	    	return row*width + col;
 	    }	
 	    
@@ -219,5 +209,55 @@ public class FloodRegion {
 	        	rgbim1 [P1.x + i] = (r3 << 16) | (g3 << 8) | b3;  //build rgb for that pixel
 	        }         
 	        bim.setRGB (0, row, width, 1, rgbim1, 0, width);  //modify this row to new rules
+	    }
+	    
+	    
+	    public void catchVertical() {
+	    	int state = 0;
+	    	Point P1 = new Point();
+	    	Point P2 = new Point();
+	    	int [] ffaTranspose = new int [width*height];
+	    	int i = 0;	    	
+	    	//Transpose array to reduce cache inefficiency of seeking through array rows before columns
+	    	for (int col = 0; col < width; col++){ 
+	            for (int row = 0; row < height; row++){
+	            	ffaTranspose[i] = fillArray[retPixel(col,row)];   
+	            	i++;
+	            }            
+	        }
+	    	int [] rgbim1 = new int [width*height];  //row of pixel data for inputBim
+	        bim.getRGB (0, 0, width, height, rgbim1, 0, width); 
+	    	for (int row = 0; row < width; row++){  //for each row
+	    		state = 0;
+	            for (int col = 0; col < height; col++){
+	            	if (ffaTranspose[row *height + col] == 1  && state == 0) {
+	            		state = 1;
+	            		P1 = new Point(row,col-1);
+	            	}
+	            	else if (ffaTranspose[row *height + col] != 1  && state == 1) {
+	            		state = 0;
+	            		P2 = new Point(row,col);
+	            		vInterpolate(P1,P2, rgbim1);
+	            	}
+	            }
+	    	}
+	    	bim.setRGB (0, 0, width, height, rgbim1, 0, width);  //modify this row to new rules
+	    }
+	    
+	   //interpolate between the pixel color at P1 and P2 and write to output image
+	    private void vInterpolate(Point P1, Point P2, int[] rgbim1) {
+	        int col = P1.x;
+	        pixel p1 = new pixel(rgbim1 [retPixel(col,P1.y)]);
+	        pixel p2 = new pixel(rgbim1 [retPixel(col,P2.y)]);       
+	        double gap = P2.y - P1.y + 0.0;
+	        int startCoord = retPixel(P1.x,P1.y);
+	        for (int i = 1; i < gap; i++) {  
+	        	pixel p4 = new pixel(rgbim1 [startCoord+i*width]);
+	        	int r = (int) (((p2.r-p1.r)*i/gap + p1.r)+p4.r)/2 ;
+	        	int g = (int) (((p2.g-p1.g)*i/gap + p1.g)+p4.g)/2 ;
+	        	int b = (int) (((p2.b-p1.b)*i/gap + p1.b)+p4.b)/2 ;
+	        	pixel p3 = new pixel(r,g,b);
+	        	rgbim1 [startCoord+i*width] = p3.build();  //build rgb for that pixel
+	        }       
 	    }
 }
