@@ -8,9 +8,9 @@ public class FloodRegion {
 	private static int source_height, source_width;
 	private static int [] source_rgbData;	
 	private Point topLeft, bottomRight;
-	private int height, width, pixelsSelected=0;
+	private int height, width;
 	private int [] fillArray;
-	private BufferedImage bim=null;
+	private BufferedImage cleanbim,finalbim=null;
 	private Stack<Integer> st;	
 	private int padding = 4;	
 	
@@ -47,7 +47,8 @@ public class FloodRegion {
 	//********************************************************
     //Getters Start
     //********************************************************
-	public BufferedImage getbim() {	return bim;	}
+	public BufferedImage getfinalbim() {	return finalbim;	}
+	public BufferedImage getcleanbim() {	return cleanbim;	}
 	public Point getTopLeft() {	return topLeft; }	
 	public Point getBottomRight() {	return bottomRight;}	
 	public Point getDim() {return new Point(width,height);}	
@@ -78,8 +79,10 @@ public class FloodRegion {
 				dest_rgbData[it_destRGB] = source_rgbData[it_sourceRGB];				
 			}
 		}
-		bim = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);	
-		bim.setRGB (0, 0, width, height, dest_rgbData, 0, width); 
+		cleanbim = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+		cleanbim.setRGB (0, 0, width, height, dest_rgbData, 0, width); 
+		finalbim = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);		
+		finalbim.setRGB (0, 0, width, height, dest_rgbData, 0, width); 
 	}
 	
 	private void addPadding() {
@@ -141,7 +144,6 @@ public class FloodRegion {
 	        if(call_colorOffset <= tolerance && neighbor_colorOffset <= tolerance && source_fillArray[pixelIndex] != 4) {
 	        	returnVal= 1;
 	        	st.push(pixelIndex);
-	        	pixelsSelected++;
 	        }
 	        return returnVal;	        
 	    }
@@ -198,7 +200,7 @@ public class FloodRegion {
 	    private void hInterpolate(Point P1, Point P2) {
 	    	int [] rgbim1 = new int [width];  //row of pixel data for inputBim
 	    	int row = P1.y;
-	        bim.getRGB (0, row, width, 1, rgbim1, 0, width);  //save that row's pixel data to array
+	        finalbim.getRGB (0, row, width, 1, rgbim1, 0, width);  //save that row's pixel data to array
 	        pixel p1 = new pixel(rgbim1 [P1.x]);
 	        pixel p2 = new pixel(rgbim1 [P2.x]);       
 	        double gap = P2.x - P1.x + 0.0;
@@ -208,7 +210,7 @@ public class FloodRegion {
 	        	int b3 = (int) ((p2.b-p1.b)*i/gap + p1.b) ;
 	        	rgbim1 [P1.x + i] = (r3 << 16) | (g3 << 8) | b3;  //build rgb for that pixel
 	        }         
-	        bim.setRGB (0, row, width, 1, rgbim1, 0, width);  //modify this row to new rules
+	        finalbim.setRGB (0, row, width, 1, rgbim1, 0, width);  //modify this row to new rules
 	    }
 	    
 	    
@@ -226,7 +228,7 @@ public class FloodRegion {
 	            }            
 	        }
 	    	int [] rgbim1 = new int [width*height];  //row of pixel data for inputBim
-	        bim.getRGB (0, 0, width, height, rgbim1, 0, width); 
+	        finalbim.getRGB (0, 0, width, height, rgbim1, 0, width); 
 	    	for (int row = 0; row < width; row++){  //for each row
 	    		state = 0;
 	            for (int col = 0; col < height; col++){
@@ -241,7 +243,7 @@ public class FloodRegion {
 	            	}
 	            }
 	    	}
-	    	bim.setRGB (0, 0, width, height, rgbim1, 0, width);  //modify this row to new rules
+	    	finalbim.setRGB (0, 0, width, height, rgbim1, 0, width);  //modify this row to new rules
 	    }
 	    
 	   //interpolate between the pixel color at P1 and P2 and write to output image
