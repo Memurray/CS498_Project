@@ -9,10 +9,9 @@ import java.awt.image.Kernel;
 public class MyImageObj extends JLabel {
     private BufferedImageSP bim;
     private BufferedImageSP filteredbim;
-    private BufferedImageSP finalbim;
-    private int showfiltered= 0;
+    private int imageSelection= 0;
     private int [] toFillArray;
-    private int height, width, pixelsSelected, startX, startY;
+    private int height, width, pixelsSelected;
     private Point selectionStart, selectionEnd;
     private boolean selecting  = false;
     private boolean filteredFlag = false;
@@ -39,7 +38,12 @@ public class MyImageObj extends JLabel {
 
    public BufferedImage getImage() {return bim.getBim(); }   
    
-   public BufferedImage returnFinal() { return finalbim.getBim(); }
+   public BufferedImage returnFinal() { 
+	   BufferedImage img = buildComp();
+	   Graphics2D g2d = img.createGraphics();
+	   processText(g2d);
+	   return img;    
+   }
     
     public void setSelection(Point start, Point end){
     	selecting=true;
@@ -54,11 +58,10 @@ public class MyImageObj extends JLabel {
     
     public void setTol(int input) {
     	sliderTol = (double) input * 2.55;
-    	finalbim.copyBim(bim.getBim());
     	if(!filteredFlag)
     		filterImage();
     	mapBounds();
-        showfiltered=2;
+        imageSelection=2;
         this.repaint();
     }  
     //********************************************************
@@ -85,9 +88,8 @@ public class MyImageObj extends JLabel {
         selectionEnd = new Point(width-1,height-1);
         sliderTol = 102.0;
         filteredbim = new BufferedImageSP(bim.getBim());
-        finalbim = new BufferedImageSP(bim.getBim());
         setPreferredSize(new Dimension(width, height));
-        showfiltered=0;
+        imageSelection=0;
         filteredFlag = false;
         this.repaint();
     }      
@@ -98,7 +100,6 @@ public class MyImageObj extends JLabel {
     	selecting=false;
     	fixSelection();
     	filterImage();   
-    	finalbim.copyBim(bim.getBim());
         repaint();
     }
 
@@ -109,7 +110,7 @@ public class MyImageObj extends JLabel {
         filteredbim.blackAndWhite(30);
         filteredFlag = true;
         mapBounds();        
-        showFiltered();
+        showFinal();
         this.repaint();
     }
     
@@ -137,7 +138,7 @@ public class MyImageObj extends JLabel {
     }
     
     //Check if current inspection x,y is inside user specific area
-    public boolean inSelection() {
+    public boolean inSelection(int startX, int startY) {
     	if(startX >= selectionStart.x && startX <= selectionEnd.x && startY >= selectionStart.y && startY <= selectionEnd.y)
     		return true;
     	return false;
@@ -156,10 +157,8 @@ public class MyImageObj extends JLabel {
                 	pixel p1 = new pixel(rgbData[pixel]);  //extract pixel data
 	                if(p1.r==0 && p1.g==0 && p1.b==0) {  //If pixel is white
 	                	toFillArray[pixel]=3;  //mark as visited, valid pixel
-	                	startX = col+1;
-	                	startY = row+1;
 	                	expand(row,col,toFillArray,rgbData,new pixel(),0.0);  //run flood fill operation starting at this pixel
-                		assignRegion();  //determine whether this flood region is text or background
+                		assignRegion(col+1,row+1);  //determine whether this flood region is text or background
 	                }
 	                else  //if not white, mark as visited
 	                	toFillArray[pixel]=2;
@@ -169,13 +168,13 @@ public class MyImageObj extends JLabel {
     }
     
     //Categorize flood region
-    private void assignRegion() {
+    private void assignRegion(int startX, int startY) {
     	int resultVal;
     	int max = 10;
 		int min = 10000;
 		if(pixelsSelected * max < height*width && pixelsSelected * min > height*width) {  //if flood region is not too big or too small
 			resultVal = 1;  //New value will be 1, meaning considered text and wont be picked up during next run of this method
-			finalBounds();	//Evaluate this area on the real image (not the edgeDetect)
+			finalBounds(startX, startY);	//Evaluate this area on the real image (not the edgeDetect)
     	}
     	else if(pixelsSelected * min <= height*width)
     		resultVal = 5;  //Region considered too small, not currently used for anything, but can be if needed in the future
@@ -193,8 +192,8 @@ public class MyImageObj extends JLabel {
     }    
     
     //Perform flood fill region select on the unprocessed image
-    private void finalBounds(){
-    	if(inSelection())  {
+    private void finalBounds(int startX, int startY){
+    	if(inSelection(startX, startY))  {
 	    	fr.add(new FloodRegion(toFillArray,bim,new Point(startX,startY),sliderTol));   
 	    	if(vIntBool) //If vertical interpolation is turned on
 	    		fr.get(fr.size()-1).catchVertical();
@@ -261,7 +260,7 @@ public class MyImageObj extends JLabel {
     	for (int it = 0; it < fr.size(); it++) {
 	    	FloodRegion f = fr.get(it);
 	    	Point dims = f.getDim();
-	    	BufferedImage bim2 = f.getbim();	    	
+	    	BufferedImage bim2 = f.getfinalbim();	    	
 	        int [] rgbim2 = new int [dims.x*dims.y];  //row of pixel data for inputBim
 	        bim2.getRGB (0, 0, dims.x, dims.y, rgbim2, 0, dims.x);
 	        int i_dest, i_source;
@@ -276,40 +275,42 @@ public class MyImageObj extends JLabel {
 		compbim.setRGB (0, 0, width, height, rgbim1, 0, width); 
 		return compbim;
     }
+    
+    private void processText(Graphics2D big) {
+        if(filteredFlag && textBool && fr.size()>0) {  //Text rendering rules
+        	big.setColor(Color.BLUE);
+        	FloodRegion f = fr.get(0);
+        	float fontSize = (float) (f.getTextHeight()*1.4);
+	        big.setFont(new Font("default", Font.BOLD, (int)fontSize));
+	        big.drawString(textFill,f.getTextAnchor().x,f.getTextAnchor().y); 
+        }
+    }
        
     
     //Aliasing arbitrary display option numbers with more sensible method names.
     //***************************************************
-    public void showEdge() 		{ 	showfiltered = 1;   }    
-    public void showFiltered()  {  	showfiltered = 2;   }
+    public void showEdge() 		{ 	imageSelection = 1;   }    
+    public void showFinal()  {  	imageSelection = 2;   }
     //***************************************************
     
     //Graphic output rendering rules
     public void paintComponent(Graphics g) {
         Graphics2D big = (Graphics2D) g;
-        if (showfiltered == 0)
+        if (imageSelection == 0)
             big.drawImage(bim.getBim(), 0, 0, this);
-        else if (showfiltered == 1)
+        else if (imageSelection == 1)
         	big.drawImage(filteredbim.getBim(), 0, 0, this);
         else
             big.drawImage(buildComp(), 0, 0, this);
         if(selecting){  //as long as both points are defined
-            g.setColor(Color.RED);
+            big.setColor(Color.RED);
             int x=Math.min(selectionStart.x, selectionEnd.x);
             int y=Math.min(selectionStart.y, selectionEnd.y);
             int width=Math.abs(selectionStart.x - selectionEnd.x);
             int height=Math.abs(selectionStart.y - selectionEnd.y);
-            g.drawRect(x,y,width,height);  //draw a red rectangle around the area the user is right click and drag selecting
-        }
-        
-        if(filteredFlag && textBool && fr.size()>0) {  //Text rendering rules
-        	g.setColor(Color.BLUE);
-        	FloodRegion f = fr.get(0);
-        	float fontSize = (float) (f.getTextHeight()*1.4);
-	        Font font = g.getFont().deriveFont(fontSize);
-	        g.setFont( font );
-	        g.drawString(textFill,f.getTextAnchor().x,f.getTextAnchor().y); 
-        }
-        g.setColor(Color.BLACK);
+            big.drawRect(x,y,width,height);  //draw a red rectangle around the area the user is right click and drag selecting
+        }        
+        processText(big);
+        big.setColor(Color.BLACK);        
     }
 }
