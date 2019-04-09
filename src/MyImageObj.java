@@ -19,8 +19,8 @@ public class MyImageObj extends JLabel {
     private Stack<Integer> st;
     private boolean vIntBool = false;
     private boolean textBool = false;
-    private String textFill = "Text";
     private List<FloodRegion> fr;
+    TextSetWindow tWindow = null;
     
     
     public MyImageObj(BufferedImage img) {
@@ -52,9 +52,6 @@ public class MyImageObj extends JLabel {
         repaint();
     }   
     
-    public void setDisplayText(String in) {textFill = in;}
-    
-    public String getDisplayText() {return textFill;}
     
     public void setTol(int input) {
     	sliderTol = (double) input * 2.55;
@@ -80,6 +77,10 @@ public class MyImageObj extends JLabel {
    
     //Re-Initialize variables, also used for original construction
     public void resetImage() {
+    	if(tWindow != null) 
+    		tWindow.dispose();
+    	tWindow = new TextSetWindow(this);
+    	tWindow.pack();
         if (bim == null) return;
         fr = new ArrayList<FloodRegion> ();
         height = bim.getHeight();
@@ -282,10 +283,13 @@ public class MyImageObj extends JLabel {
         	FloodRegion f = fr.get(0);
         	float fontSize = (float) (f.getTextHeight()*1.4);
 	        big.setFont(new Font("default", Font.BOLD, (int)fontSize));
-	        big.drawString(textFill,f.getTextAnchor().x,f.getTextAnchor().y); 
+	        big.drawString(tWindow.getText(),f.getTextAnchor().x,f.getTextAnchor().y); 
         }
     }
        
+    public void showTextWindow() {
+        tWindow.setVisible(true);
+    }
     
     //Aliasing arbitrary display option numbers with more sensible method names.
     //***************************************************
