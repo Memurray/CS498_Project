@@ -45,9 +45,7 @@ public class ImageFrame extends JFrame {
         setText.addActionListener(
                 new ActionListener () {
                     public void actionPerformed (ActionEvent e) {
-                    	TextSetWindow tWindow = new TextSetWindow(view);
-                        tWindow.pack();
-                        tWindow.setVisible(true);    
+                        view.showTextWindow();    
                         if(!textToggle.isSelected()) {
                     		textToggle.setSelected(true);
                     		view.toggleText(); 
@@ -76,6 +74,7 @@ public class ImageFrame extends JFrame {
         fileopen.addActionListener(
                 new ActionListener () {
                     public void actionPerformed (ActionEvent e) {
+                    	fc.resetChoosableFileFilters();
                     	fc.setFileFilter(new FileNameExtensionFilter("Image files",new String[] { "png", "jpg", "jpeg", "gif" }));
                         int returnVal = fc.showOpenDialog(ImageFrame.this);
                         if (returnVal == JFileChooser.APPROVE_OPTION) {
@@ -84,8 +83,8 @@ public class ImageFrame extends JFrame {
                                 image = ImageIO.read(file);
                             } catch (IOException e1){};
                             view.setImage(image);
-                            toleranceLabel.setText("  " + 55 + "% Boundary Tolerance");
-                            toleranceSlider.setValue(55);
+                            toleranceLabel.setText("  " + 40 + "% Boundary Tolerance");
+                            toleranceSlider.setValue(40);
                             view.resetImage();
                             ImageFrame.super.pack(); //updates window size based on new image loaded
                         }
@@ -96,11 +95,22 @@ public class ImageFrame extends JFrame {
         saveFile.addActionListener(
                 new ActionListener () {
                     public void actionPerformed (ActionEvent e) {
+                    	fc.resetChoosableFileFilters();
+                    	FileNameExtensionFilter jpg = new FileNameExtensionFilter(".jpg","jpg");
+                    	FileNameExtensionFilter gif = new FileNameExtensionFilter(".gif","gif");
+                    	fc.addChoosableFileFilter(jpg);
+                    	fc.addChoosableFileFilter(gif);
+                    	fc.setFileFilter(new FileNameExtensionFilter(".png","png"));
                     	int retVal = fc.showSaveDialog(ImageFrame.this);
-                    	File file = new File(fc.getSelectedFile() + ".png");
                     	if(retVal==JFileChooser.APPROVE_OPTION){
                     	    try {
-								ImageIO.write(view.returnFinal(), "png", file);
+                    	    	String filetype = "png";
+                    	    	if(fc.getFileFilter() == jpg) 
+                    	    		filetype = "jpg";                    	    	
+                    	    	else if(fc.getFileFilter() == gif)
+                    	    		filetype = "gif";
+                    	    	File file = new File(fc.getSelectedFile() + "."+filetype);
+								ImageIO.write(view.returnFinal(), filetype, file);
 							} catch (IOException e2) {}    
                     	 }
                     }
@@ -131,7 +141,7 @@ public class ImageFrame extends JFrame {
         ResetButton = new JButton("Reset");
         EdgeDetectButton = new JButton("Edge Detect");
         FilterButton = new JButton("Filter Image");
-        toleranceLabel = new JLabel("  55% Boundary Tolerance");
+        toleranceLabel = new JLabel("  40% Boundary Tolerance");
 
         ResetButton.addActionListener( //If Reset button clicked
                 new ActionListener () {
@@ -144,7 +154,7 @@ public class ImageFrame extends JFrame {
                     		vInterpolateToggle.setSelected(false);
                     		view.toggleVint();   
                     	}
-                        toleranceSlider.setValue(55);
+                        toleranceSlider.setValue(40);
                         view.resetImage();
                         infoLabel.setText("Original Image");
                     }
@@ -155,7 +165,7 @@ public class ImageFrame extends JFrame {
                 new ActionListener () {
                     public void actionPerformed (ActionEvent e) {
                         view.filterImage();
-                        view.showFiltered();
+                        view.showFinal();
                         infoLabel.setText("Filtered Image");
                     }
                 }
@@ -173,7 +183,7 @@ public class ImageFrame extends JFrame {
         );       
         
         // Set up Slider bar
-        toleranceSlider = new JSlider(SwingConstants.HORIZONTAL, 0, 100, 55 );
+        toleranceSlider = new JSlider(SwingConstants.HORIZONTAL, 0, 100, 40 );
         toleranceSlider.setMajorTickSpacing(25);
         toleranceSlider.setPaintTicks(true);
         toleranceSlider.setPaintLabels(true);
