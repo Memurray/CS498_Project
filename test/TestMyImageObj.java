@@ -1,24 +1,12 @@
 import static org.junit.Assert.*;
-
-import java.awt.Component;
-import java.awt.Graphics2D;
-import java.awt.Image;
-import java.awt.MediaTracker;
 import java.awt.Point;
-import java.awt.Toolkit;
 import java.awt.image.BufferedImage;
-import java.io.IOException;
-
-import javax.imageio.ImageIO;
-import javax.swing.JFrame;
-
 import org.junit.*;
 
 public class TestMyImageObj {
-	
-		
+		ImageFrame f = new ImageFrame();
+		BufferedImage bim = f.getImage();
 		MyImageObj MIO = new MyImageObj(new BufferedImage(400,400, BufferedImage.TYPE_INT_RGB));	
-		
 		
 
 		@Test 
@@ -54,7 +42,18 @@ public class TestMyImageObj {
 		    
 		   }
 		
-	
+		@Test 
+		public void testNoRegions() 
+		   {
+			 MIO.setTol(50);
+			 assertEquals(0, MIO.getFloodRegions().size());		    
+		   }
+		
+		@Test 
+		public void testSomeRegions() 
+		   {
+			 MIO.setImage(bim);
+			 MIO.filterImage();
+			 assertEquals(4, MIO.getFloodRegions().size());		    
+		   }		
 	}
-
-
