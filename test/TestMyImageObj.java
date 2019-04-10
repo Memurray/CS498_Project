@@ -16,7 +16,7 @@ import org.junit.*;
 
 public class TestMyImageObj {
 	
-		BufferedImage bim = readImage("textimage.png");
+		BufferedImage bim = readImage("./textimage.png");
 		MyImageObj MIO = new MyImageObj(new BufferedImage(400,400, BufferedImage.TYPE_INT_RGB));	
 		
 		public BufferedImage readImage (String file) {
