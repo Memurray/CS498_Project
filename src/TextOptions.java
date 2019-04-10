@@ -67,7 +67,7 @@ public class TextOptions extends JDialog {
                 JComboBox cb = (JComboBox)e.getSource();
 
                 // Get size selected
-                int s = (int)cb.getSelectedItem();
+                int s = Integer.parseInt((String) cb.getSelectedItem());
             }
         });
         
