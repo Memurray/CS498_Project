@@ -1,3 +1,4 @@
+import java.awt.Color;
 import java.awt.Point;
 import java.awt.image.BufferedImage;
 import java.util.Stack;
@@ -12,7 +13,8 @@ public class FloodRegion {
 	private int [] fillArray;
 	private BufferedImage cleanbim,finalbim=null;
 	private Stack<Integer> st;	
-	private int padding = 4;	
+	private int padding = 4;
+	private Color fontColor;
 	
 	public FloodRegion(Point startCoord, double tolerance) {process(startCoord,tolerance);}
 	
@@ -24,7 +26,9 @@ public class FloodRegion {
 	}
 	
 	private void process(Point startCoord, double tolerance) {
+		pixel p  = new pixel(source_rgbData[retPixel(startCoord.x,startCoord.y,source_width)]);
 		int[] temp_fillArray = expand(startCoord,tolerance);	
+		fontColor = new Color(p.r , p.g , p.b);
 		addPadding();
 		height = bottomRight.y - topLeft.y;
 		width = bottomRight.x - topLeft.x;
@@ -53,7 +57,8 @@ public class FloodRegion {
 	public Point getBottomRight() {	return bottomRight;}	
 	public Point getDim() {return new Point(width,height);}	
 	public int getTextHeight() {return height - padding*2;}	
-	public Point getTextAnchor() {return new Point(topLeft.x+padding,bottomRight.y-padding);}
+	public Point getTextAnchor() {return new Point(topLeft.x+padding-1,bottomRight.y-padding);}
+	public Color getColor() {return fontColor;}
     //********************************************************
     //Getters End
     //********************************************************
