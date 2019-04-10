@@ -2,9 +2,9 @@ import javax.swing.*;
 import java.util.*;
 import java.util.List;
 import java.awt.*;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.awt.image.BufferedImage;
-import java.awt.image.ConvolveOp;
-import java.awt.image.Kernel;
 
 public class MyImageObj extends JLabel {
     private BufferedImageSP bim;
@@ -61,6 +61,10 @@ public class MyImageObj extends JLabel {
         imageSelection=2;
         this.repaint();
     }  
+    
+    public List<FloodRegion> getFloodRegions(){
+    	return fr;
+    }
     //********************************************************
     //Getters and Setters End
     //********************************************************
@@ -81,6 +85,14 @@ public class MyImageObj extends JLabel {
     		tWindow.dispose();
     	tWindow = new TextSetWindow(this);
     	tWindow.pack();
+    	tWindow.addWindowListener (
+                 new WindowAdapter () {
+                     public void windowClosing ( WindowEvent e) {
+                         tWindow.setback();  
+                         repaint();
+                         }              
+                     });
+    
         if (bim == null) return;
         fr = new ArrayList<FloodRegion> ();
         height = bim.getHeight();
@@ -116,7 +128,7 @@ public class MyImageObj extends JLabel {
     }
     
     //Enforce that start location is always less than end location for both x and y coordinates
-    private void fixSelection() {
+    public void fixSelection() {
     	int x1,x2,y1,y2;
         if(selectionStart.x > selectionEnd.x) {
         	x1 = selectionEnd.x;
@@ -279,16 +291,26 @@ public class MyImageObj extends JLabel {
     
     private void processText(Graphics2D big) {
         if(filteredFlag && textBool && fr.size()>0) {  //Text rendering rules
-        	big.setColor(Color.BLUE);
+        	big.setRenderingHint(
+        	        RenderingHints.KEY_TEXT_ANTIALIASING,
+        	        RenderingHints.VALUE_TEXT_ANTIALIAS_GASP);
         	FloodRegion f = fr.get(0);
-        	float fontSize = (float) (f.getTextHeight()*1.4);
-	        big.setFont(new Font("default", Font.BOLD, (int)fontSize));
+        	if (tWindow.isManualColor())
+        		big.setColor(tWindow.getColor());
+        	else
+        		big.setColor(f.getColor());
+        	int fontSize = tWindow.getFontSize();
+        	if(fontSize == 0)
+        			fontSize = (int) (f.getTextHeight()*1.4)+1;
+	        big.setFont(new Font(tWindow.getFontName(), Font.BOLD, (int)fontSize));
 	        big.drawString(tWindow.getText(),f.getTextAnchor().x,f.getTextAnchor().y); 
         }
     }
        
     public void showTextWindow() {
+    	filterImage();
         tWindow.setVisible(true);
+        
     }
     
     //Aliasing arbitrary display option numbers with more sensible method names.
