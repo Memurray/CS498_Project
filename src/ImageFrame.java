@@ -9,7 +9,7 @@ import javax.swing.event.ChangeListener;
 import javax.swing.filechooser.FileNameExtensionFilter;
 
 public class ImageFrame extends JFrame {
-    private BufferedImage image;   
+    public BufferedImage image;   
     private MyImageObj view;      
     private JLabel infoLabel;      
     private JButton EdgeDetectButton, FilterButton, ResetButton;
@@ -27,6 +27,7 @@ public class ImageFrame extends JFrame {
         this.buildDisplay();		// Helper method to configure GUI
         this.buildMouseSettings();	// Helper method to configure mouse click responses
     }
+    
 
     //Put together the top bar menu system
     private void buildMenus () {
@@ -136,7 +137,8 @@ public class ImageFrame extends JFrame {
 
     //Define GUI elements and their event handlers
     private void buildComponents() {
-        view = new MyImageObj(readImage("textimage.png"));
+    	image = readImage("textimage.png");
+        view = new MyImageObj(image);
         infoLabel = new JLabel("Original Image");
         ResetButton = new JButton("Reset");
         EdgeDetectButton = new JButton("Edge Detect");
@@ -258,7 +260,7 @@ public class ImageFrame extends JFrame {
         big.drawImage (image, 0, 0, this);
         return bim;
     }
-
+    
     public static void main(String[] argv) {
         JFrame frame = new ImageFrame();
         frame.pack();
