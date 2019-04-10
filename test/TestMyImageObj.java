@@ -16,24 +16,10 @@ import org.junit.*;
 
 public class TestMyImageObj {
 	
-		BufferedImage bim = readImage("./textimage.png");
+		
 		MyImageObj MIO = new MyImageObj(new BufferedImage(400,400, BufferedImage.TYPE_INT_RGB));	
 		
-		public BufferedImage readImage (String file) {
-	        Image image = Toolkit.getDefaultToolkit().getImage(file);
-	        MediaTracker tracker = new MediaTracker (new Component () {});
-	        tracker.addImage(image, 0);
-	        try { tracker.waitForID (0); }
-	        catch (InterruptedException e) {}
-	        BufferedImage bim = null;
-	        try {
-	            bim = ImageIO.read(getClass().getResource(file)); 
-	        } catch (IOException ex) { //if error do this
-	            System.err.println(ex);
-	            ex.printStackTrace();
-	        }
-	        return bim;
-	    }
+		
 
 		@Test 
 		public void testInSelectionTrue() //ensure constructor 1 works as intended
@@ -68,23 +54,7 @@ public class TestMyImageObj {
 		    
 		   }
 		
-		@Test 
-		public void testNoRegions() 
-		   {
-			 MIO.setTol(50);
-			 assertEquals(0, MIO.getFloodRegions().size());		    
-		   }
-		
-		@Test 
-		public void testSomeRegions() 
-		   {
-			 MIO.setImage(bim);
-			 MIO.filterImage();
-			 assertEquals(4, MIO.getFloodRegions().size());		    
-		   }
-		
 	
-		
 	}
 
 
