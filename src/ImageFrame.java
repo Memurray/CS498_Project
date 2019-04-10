@@ -9,7 +9,7 @@ import javax.swing.event.ChangeListener;
 import javax.swing.filechooser.FileNameExtensionFilter;
 
 public class ImageFrame extends JFrame {
-    public BufferedImage image;   
+    private BufferedImage image;   
     private MyImageObj view;      
     private JLabel infoLabel;      
     private JButton EdgeDetectButton, FilterButton, ResetButton;
@@ -28,7 +28,10 @@ public class ImageFrame extends JFrame {
         this.buildMouseSettings();	// Helper method to configure mouse click responses
     }
     
-
+    public BufferedImage getImage() {
+    	return image;
+    }
+    
     //Put together the top bar menu system
     private void buildMenus () {
         final JFileChooser fc = new JFileChooser(".");
