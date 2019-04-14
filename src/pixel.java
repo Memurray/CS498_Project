@@ -47,6 +47,12 @@ public class pixel {
     	b=0;
 	}
 	
+	public boolean isWhite() {
+		if(r ==255 && g ==255 && b==255)
+			return true;
+		return false;
+	}
+	
 	//Returns color channels back as standard 1 integer value used for Buffered Images
 	public int build() {
 		return (r << 16) | (g << 8) | b;
