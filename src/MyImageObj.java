@@ -21,6 +21,7 @@ public class MyImageObj extends JLabel {
     private boolean textBool = false;
     private List<FloodRegion> fr;
     TextSetWindow tWindow = null;
+    FontGuessWindow guessWindow;
     
     
     public MyImageObj(BufferedImage img) {
@@ -92,7 +93,7 @@ public class MyImageObj extends JLabel {
                          repaint();
                          }              
                      });
-    
+    	guessWindow = new FontGuessWindow(this);
         if (bim == null) return;
         fr = new ArrayList<FloodRegion> ();
         height = bim.getHeight();
@@ -289,12 +290,58 @@ public class MyImageObj extends JLabel {
 		return compbim;
     }
     
+    private int leftMostFloodRegion() {
+    	int ret = 0;
+    	int x = 10000;
+    	for (int it = 0; it < fr.size(); it++) {
+    		if (fr.get(it).getTopLeft().x < x) {
+    			ret = it;
+    			x = fr.get(it).getTopLeft().x;
+    		}
+    	}
+    	return ret;
+	}
+    
+    public void openGuessWindow() {
+    	guessWindow.pack();
+    	guessWindow.setVisible(true);    	
+    }
+    
+    
+    public String genLetter(String letter) {        	
+    	String fonts[] = new String[] {"Arial","Georgia", "Rockwell Extra Bold", "Comic Sans MS", "Arial Narrow"};
+    	//String fonts[] = GraphicsEnvironment.getLocalGraphicsEnvironment().getAvailableFontFamilyNames();
+    	int target = leftMostFloodRegion();
+    	Point dims = fr.get(target).getDim();
+    	int bestGuess=0;
+    	int bestScore=-10000;
+    	for(int font_iterator=0; font_iterator < fonts.length;  font_iterator++) {
+	    	BufferedImageSP letterbim =  new BufferedImageSP(dims.x,dims.y);
+	    	letterbim.renderLetter("T",fonts[font_iterator],fr.get(target).getPad());    	
+	    	int[] fillArrayGen = letterbim.buildFillArray();
+	    	int[] fillArrayReal = fr.get(target).getFillArray();
+	    	int matchScore = 0;
+	    	for (int i = 0; i< dims.x*dims.y; i++) {
+	    		matchScore = matchScore + fillArrayGen[i] * fillArrayReal[i];
+	    	}
+	    	if (matchScore > bestScore) {
+	    		bestScore = matchScore;
+	    		bestGuess = font_iterator;
+	    	}  
+    	}      	
+    	JOptionPane.showMessageDialog(null, fonts[bestGuess]);
+    	return fonts[bestGuess];
+    }
+    
     private void processText(Graphics2D big) {
         if(filteredFlag && textBool && fr.size()>0) {  //Text rendering rules
         	big.setRenderingHint(
         	        RenderingHints.KEY_TEXT_ANTIALIASING,
         	        RenderingHints.VALUE_TEXT_ANTIALIAS_GASP);
-        	FloodRegion f = fr.get(0);
+        	FloodRegion f = fr.get(leftMostFloodRegion());
+        	String fontName = tWindow.getFontName();
+        	if(fontName == "Auto")
+    			fontName = guessWindow.getFontName();
         	if (tWindow.isManualColor())
         		big.setColor(tWindow.getColor());
         	else
@@ -302,7 +349,7 @@ public class MyImageObj extends JLabel {
         	int fontSize = tWindow.getFontSize();
         	if(fontSize == 0)
         			fontSize = (int) (f.getTextHeight()*1.4)+1;
-	        big.setFont(new Font(tWindow.getFontName(), Font.BOLD, (int)fontSize));
+	        big.setFont(new Font(fontName, Font.BOLD, (int)fontSize));
 	        big.drawString(tWindow.getText(),f.getTextAnchor().x,f.getTextAnchor().y); 
         }
     }
@@ -315,8 +362,8 @@ public class MyImageObj extends JLabel {
     
     //Aliasing arbitrary display option numbers with more sensible method names.
     //***************************************************
-    public void showEdge() 		{ 	imageSelection = 1;   }    
-    public void showFinal()  {  	imageSelection = 2;   }
+    public void showOriginal() 		{ 	imageSelection = 0;   }    
+    public void showFinal()  		{  	imageSelection = 1;   }
     //***************************************************
     
     //Graphic output rendering rules
@@ -324,10 +371,8 @@ public class MyImageObj extends JLabel {
         Graphics2D big = (Graphics2D) g;
         if (imageSelection == 0)
             big.drawImage(bim.getBim(), 0, 0, this);
-        else if (imageSelection == 1)
-        	big.drawImage(filteredbim.getBim(), 0, 0, this);
         else
-            big.drawImage(buildComp(), 0, 0, this);
+        	big.drawImage(buildComp(), 0, 0, this);
         if(selecting){  //as long as both points are defined
             big.setColor(Color.RED);
             int x=Math.min(selectionStart.x, selectionEnd.x);
