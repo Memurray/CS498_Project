@@ -12,7 +12,7 @@ public class ImageFrame extends JFrame {
     private BufferedImage image;   
     private MyImageObj view;      
     private JLabel infoLabel;      
-    private JButton EdgeDetectButton, FilterButton, ResetButton;
+    private JButton GuessFontButton, FilterButton, ResetButton;
     private boolean isLDragging = false;
     private Point dragStart;
     private JLabel toleranceLabel;
@@ -90,6 +90,10 @@ public class ImageFrame extends JFrame {
                             toleranceLabel.setText("  " + 40 + "% Boundary Tolerance");
                             toleranceSlider.setValue(40);
                             view.resetImage();
+                            if(textToggle.isSelected()) {
+                        		textToggle.setSelected(false);
+                        		view.toggleText();
+                            }
                             ImageFrame.super.pack(); //updates window size based on new image loaded
                         }
                     }
@@ -144,7 +148,7 @@ public class ImageFrame extends JFrame {
         view = new MyImageObj(image);
         infoLabel = new JLabel("Original Image");
         ResetButton = new JButton("Reset");
-        EdgeDetectButton = new JButton("Edge Detect");
+        GuessFontButton = new JButton("Guess Font");
         FilterButton = new JButton("Filter Image");
         toleranceLabel = new JLabel("  40% Boundary Tolerance");
 
@@ -177,12 +181,13 @@ public class ImageFrame extends JFrame {
         );
         
         
-        EdgeDetectButton.addActionListener( //If Edge Detect button is clicked
+        GuessFontButton.addActionListener( //If Edge Detect button is clicked
                 new ActionListener () {
                     public void actionPerformed (ActionEvent e) {
-                        view.filterImage();
-                        view.showEdge();
-                        infoLabel.setText("Edges Detected");
+                    	view.filterImage();
+                    	view.openGuessWindow();
+                    	view.showOriginal();
+                    	infoLabel.setText("Original Image");
                     }
                 }
         );       
@@ -236,7 +241,7 @@ public class ImageFrame extends JFrame {
         toleranceLabel.setHorizontalAlignment(JLabel.CENTER);
         controlPanel.add(toleranceLabel);
         controlPanel.add(ResetButton);
-        controlPanel.add(EdgeDetectButton);
+        controlPanel.add(GuessFontButton);
         controlPanel.add(toleranceSlider);
         infoLabel.setHorizontalAlignment(JLabel.CENTER);
         controlPanel.add(infoLabel);
