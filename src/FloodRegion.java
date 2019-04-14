@@ -56,8 +56,10 @@ public class FloodRegion {
 	public Point getTopLeft() {	return topLeft; }	
 	public Point getBottomRight() {	return bottomRight;}	
 	public Point getDim() {return new Point(width,height);}	
+	public int getPad() {return padding;}	
+	public int[] getFillArray() {return fillArray;}
 	public int getTextHeight() {return height - padding*2;}	
-	public Point getTextAnchor() {return new Point(topLeft.x+padding-1,bottomRight.y-padding);}
+	public Point getTextAnchor() {return new Point(topLeft.x+padding-6,bottomRight.y-padding+1);}
 	public Color getColor() {return fontColor;}
     //********************************************************
     //Getters End
