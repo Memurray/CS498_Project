@@ -13,7 +13,7 @@ public class TextSetWindow extends JFrame{
 	private TextField textbox;
 	private String text = "TEXT";
 	private int fontSize = 0;
-	private String fontName="default";
+	private String fontName="Auto";
 	private Color color;
 	private JLabel colorLabel;
 	private JRadioButton pickerRadioButton,autoRadioButton;
@@ -39,8 +39,9 @@ public class TextSetWindow extends JFrame{
         colorLabel = new JLabel();
         colorLabel.setBackground(color);
         colorLabel.setOpaque(true);
-        String fontSizes[] = new String[] {"Auto","8","10","12","16","24","32","48","72","100","120","150"};
-        String fonts[] = GraphicsEnvironment.getLocalGraphicsEnvironment().getAvailableFontFamilyNames();        
+        String fontSizes[] = new String[] {"Auto","8","10","12","16","24","32","48","72","100","120","150","256"};
+        String fonts[] = GraphicsEnvironment.getLocalGraphicsEnvironment().getAvailableFontFamilyNames();    
+        fonts[0] = "Auto";
         autoRadioButton = new JRadioButton("Auto");
         autoRadioButton.setSelected(true);
         pickerRadioButton = new JRadioButton("Color Picker");        
@@ -48,7 +49,7 @@ public class TextSetWindow extends JFrame{
         group.add(autoRadioButton);
         group.add(pickerRadioButton);
         fontNameList = new JComboBox<String>(fonts);
-        fontNameList.getModel().setSelectedItem("Arial");
+        fontNameList.setSelectedIndex(0);
         fontSizeList = new JComboBox<String>(fontSizes);
         fontSizeList.setSelectedIndex(0);
         makeCopies();
