@@ -7,6 +7,7 @@
   <version>1.0-SNAPSHOT</version>
   <name>TextDetect</name>
   <url>http://maven.apache.org</url>
+
   <dependencies>
     <dependency>
       <groupId>junit</groupId>
@@ -17,10 +18,27 @@
   </dependencies>
   <build>
       <sourceDirectory>./src/</sourceDirectory>
-      <outputDirectory>./target/classes/</outputDirectory>
+      <outputDirectory>./src/</outputDirectory>
       <testSourceDirectory>./test/</testSourceDirectory>
-      <testOutputDirectory>./target/test-classes/</testOutputDirectory>
+      <testOutputDirectory>./src/</testOutputDirectory>
      <plugins>
+      <plugin>
+    <artifactId>maven-clean-plugin</artifactId>
+    <version>3.0.0</version>
+    <configuration>
+           <excludeDefaultDirectories>true</excludeDefaultDirectories>
+           <filesets>
+                <fileset>
+                    <directory>./src/</directory>
+                    <followSymlinks>false</followSymlinks>
+                    <useDefaultExcludes>true</useDefaultExcludes>
+                    <includes>
+                          <include>*.class</include>
+                    </includes>
+                 </fileset>
+            </filesets>
+        </configuration>
+</plugin>
          <plugin>
               <groupId>org.apache.maven.plugins</groupId>
               <artifactId>maven-compiler-plugin</artifactId>
